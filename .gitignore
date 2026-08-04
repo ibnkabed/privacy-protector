@@ -1,0 +1,30 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Private runtime data and captures
+data/
+captures/
+*.ndjson
+*.log
+*.pcap
+*.pcapng
+*.syslog
+*.sqlite*
+connection-status.json
+
+# Browser and local application state
+edge-profile/
+browser-state/
+exports/
+*.tmp
+*.bak
+
+# Windows and editors
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/
