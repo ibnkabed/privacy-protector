@@ -304,7 +304,6 @@ The application writes JSON atomically by creating a temporary file and replacin
 | `launch_hidden.vbs` | Runs the PowerShell launcher without showing a console window and prefers PowerShell `7` for UTF-8 script handling |
 | `Privacy Protector.cmd` | Desktop-shortcut entry point |
 | `create-shortcut.ps1` | Creates the English-named desktop shortcut with the project icon |
-| `THIRD_PARTY_NOTICE.md` | Attribution and historical inspiration notice |
 
 ## Runtime requirements
 
@@ -468,7 +467,6 @@ The suite covers case, terminal-dot, IDNA, invalid-name, and common record-type 
 | Specialized endpoint mappings are intentionally absent | Add reviewed organization-specific mappings only through local configuration kept outside distributable source |
 | Runtime data is private local state | It is stored under `%LOCALAPPDATA%\PrivacyProtector\data` and should be backed up separately from the source tree |
 | Paired-device dependencies are substantial | Install the pinned requirement in a virtual environment; the DNS and dashboard core remains standard-library based |
-| No project-owned license file is present | Public reuse terms are not yet defined |
 
 ## Troubleshooting
 
@@ -493,8 +491,6 @@ The suite covers case, terminal-dot, IDNA, invalid-name, and common record-type 
 
 Before changing policy or deleting profiles, stop the backend and make a private backup of `%LOCALAPPDATA%\PrivacyProtector\data` in a protected location. The backup contains the same sensitive inventory and DNS evidence as the live files.
 
-## Third-party notice and licensing
+## License
 
-The defensive mobile-security concept and name are historically inspired by Mobilicustos. Attribution is preserved in `THIRD_PARTY_NOTICE.md`. The original archive is not bundled, and this implementation does not include its Frida, bypass, privileged Docker, or application-patching workflows.
-
-The current project does not contain a project-owned `LICENSE` file. If formal distribution or reuse terms are needed, add a license that accurately describes how others may use this implementation. The third-party notice does not replace a license for this project's own code.
+This project is licensed under the MIT License. See `LICENSE` for details.
