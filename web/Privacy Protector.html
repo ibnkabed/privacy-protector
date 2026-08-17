@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Privacy Protector - local iPhone connection protection and Apple App Privacy Report analysis.">
+  <meta name="robots" content="noindex,nofollow,nosnippet,noimageindex">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b2540">
+  <title>Privacy Protector</title>
+  <link rel="icon" href="assets/Privacy%20Protector.ico" sizes="any">
+  <link rel="stylesheet" href="styles.css?v=1.0.0">
+</head>
+<body>
+  <div class="shell">
+    <div class="frame">
+      <header class="banner">
+        <div class="brand">
+          <img class="brand-logo" src="assets/Privacy%20Protector.png" alt="" aria-hidden="true">
+          <div>
+            <h1>Privacy Protector</h1>
+            <p>Local protection for iPhone connections</p>
+          </div>
+        </div>
+        <div class="top-status">
+          <span class="local-badge">Your data stays on this computer</span>
+          <span id="serviceStatus" class="service pending">Checking...</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="intro">
+          <div>
+            <h2>Protection Center</h2>
+            <p>Import an Apple report, review hostnames, and apply exact blocking only after verification.</p>
+          </div>
+          <div class="intro-actions">
+            <button id="openDeveloperShield" class="file-button developer-shield-button" type="button">
+              Check Developer Mode
+            </button>
+            <button id="openPermissionCenter" class="file-button permission-button" type="button">
+              Permission Center
+            </button>
+            <button id="showDetectedApps" class="file-button detected-button" type="button">
+              Detected Applications <strong id="detectedCount">0</strong>
+            </button>
+            <label class="file-button">
+              <input id="reportFile" type="file" accept=".ndjson,application/x-ndjson">
+              <span>Import Apple Report</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="metrics" aria-label="Report summary">
+          <article>
+            <span class="metric-label">Records</span>
+            <strong id="totalRows">—</strong>
+            <small id="reportWindow">No report imported</small>
+          </article>
+          <article>
+            <span class="metric-label">Applications</span>
+            <strong id="appCount">—</strong>
+            <small id="appInventorySummary">Detected: — — Monitored: —</small>
+          </article>
+          <article>
+            <span class="metric-label">Hostnames</span>
+            <strong id="domainCount">—</strong>
+            <small id="trackerCount">Privacy-sensitive: —</small>
+          </article>
+          <article>
+            <span class="metric-label">Active blocks</span>
+            <strong id="blockedCount">—</strong>
+            <small id="dnsPort">DNS: —</small>
+          </article>
+        </section>
+
+        <section class="workspace">
+          <article class="panel report-panel">
+            <div class="panel-head activity-heading">
+              <div>
+                <h3>Application Activity & Connections</h3>
+                <p id="reportName">Permanent inventory of DNS hostnames observed from the device</p>
+              </div>
+            </div>
+            <div class="activity-toolbar" aria-label="Application activity tools">
+              <div class="activity-selectors">
+                <label class="toolbar-field">
+                  <span>Application</span>
+                  <select id="appProfile" aria-label="Show activity for a selected application">
+                    <option value="">All applications</option>
+                  </select>
+                </label>
+                <label class="toolbar-field">
+                  <span>Filter</span>
+                  <select id="rowFilter" aria-label="Filter records">
+                    <option value="all">All classifications</option>
+                    <option value="green">Green - functional</option>
+                    <option value="orange">Orange - operational data</option>
+                    <option value="red">Red - privacy intrusion</option>
+                    <option value="managed">Has a saved action</option>
+                  </select>
+                </label>
+                <label class="toolbar-field sort-field">
+                  <span>Sort by</span>
+                  <select id="rowSort" aria-label="Sort records by">
+                    <option value="time" selected>Latest observation</option>
+                    <option value="application">Application</option>
+                    <option value="domain">Hostname</option>
+                    <option value="classification">Classification</option>
+                  </select>
+                </label>
+              </div>
+              <div class="report-tools activity-actions">
+                <button id="refreshActivity" class="quiet-button" type="button">Refresh</button>
+                <button id="analyzeDomains" class="quiet-button" type="button">Run V3 Study</button>
+                <button id="dnsSelfTest" class="quiet-button" type="button">DNS Self-test</button>
+                <button id="showLive" class="quiet-button" type="button">Live Activity</button>
+                <button id="clearActivity" class="quiet-button danger-quiet" type="button">Clear Activity</button>
+              </div>
+            </div>
+            <div id="activityCoverage" class="coverage-strip" aria-live="polite"></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Application and attribution source</th>
+                    <th>Hostname</th>
+                    <th>Classification and action</th>
+                    <th>Latest observation</th>
+                  </tr>
+                </thead>
+                <tbody id="reportRows">
+                  <tr class="empty-row">
+                    <td colspan="4">No report has been imported</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel policy-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Privacy Protection Actions</h3>
+                <p>Only hostnames you transfer manually appear here for an explicit action.</p>
+              </div>
+              <div class="policy-tools">
+                <button id="refreshOperations" class="quiet-button" type="button">Refresh</button>
+                <button id="exportRules" class="quiet-button" type="button">Export Rules</button>
+              </div>
+            </div>
+            <div class="operation-tray-tools">
+              <input id="operationFilter" type="search" autocomplete="off"
+                     aria-label="Filter privacy protection actions" placeholder="Filter actions">
+              <select id="operationSort" aria-label="Sort privacy protection actions">
+                <option value="time" selected>Latest observation</option>
+                <option value="blocked">Latest block</option>
+                <option value="name">Hostname</option>
+                <option value="classification">Classification</option>
+              </select>
+              <button id="clearOperationsView" class="quiet-button danger-quiet" type="button">Clear Tray</button>
+            </div>
+            <div id="operationsCoverage" class="coverage-strip" aria-live="polite"></div>
+            <div id="policyList" class="policy-list">
+              <div class="policy-loading">Loading policy...</div>
+            </div>
+            <div class="safety-note">
+              <span aria-hidden="true">✓</span>
+              <p><strong>Enforcement is fully manual.</strong> No hostname is transferred automatically, and no policy is written until you choose Allow, Monitor, or Block.</p>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <footer>
+        <span>Local defensive release - no jailbreak and no application modification</span>
+        <span id="footerClock"></span>
+      </footer>
+    </div>
+  </div>
+
+  <dialog id="appDialog" aria-labelledby="appDialogTitle">
+    <form id="appForm" method="dialog">
+      <div class="dialog-head">
+        <div>
+          <h2 id="appDialogTitle">Add Application for Review</h2>
+          <p>Stored locally and optionally linked to an identifier from an Apple report.</p>
+        </div>
+        <button id="closeAppDialog" class="dialog-close" type="button" aria-label="Close">×</button>
+      </div>
+
+      <label>
+        <span>Application name</span>
+        <input id="appName" name="name" maxlength="80" required autocomplete="off">
+      </label>
+      <label>
+        <span>Application Bundle ID - optional</span>
+        <input id="appBundleID" name="bundleID" maxlength="180" dir="ltr"
+               list="bundleSuggestions" autocomplete="off"
+               placeholder="Example: com.example.app">
+        <datalist id="bundleSuggestions"></datalist>
+      </label>
+      <label>
+        <span>Process name - populated automatically from a paired iPhone</span>
+        <input id="appProcessName" name="processName" maxlength="120" dir="ltr"
+               autocomplete="off" placeholder="Example: ExampleApp">
+      </label>
+      <div class="dialog-actions">
+        <button id="cancelApp" type="button">Cancel</button>
+        <button class="dialog-save" type="submit">Save Application</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detectedAppsDialog" class="detected-dialog" aria-labelledby="detectedAppsTitle">
+    <div class="detected-dialog-shell">
+      <div class="dialog-head">
+        <div>
+          <h2 id="detectedAppsTitle">Detected Applications</h2>
+          <p>Identifiers found in imported Apple App Privacy Reports.</p>
+        </div>
+        <button id="closeDetectedApps" class="dialog-close" type="button" aria-label="Close">×</button>
+      </div>
+      <label class="detected-search">
+        <span>Search by name or Bundle ID</span>
+        <input id="detectedSearch" type="search" autocomplete="off"
+               placeholder="Enter an application name or identifier">
+      </label>
+      <div class="device-inventory">
+        <button id="scanIPhoneApps" type="button">Read Applications from iPhone</button>
+        <span id="deviceScanStatus">Requires one-time iPhone pairing with this computer</span>
+      </div>
+      <div id="detectedAppsList" class="detected-apps-list">
+        <p class="detected-empty">Import an Apple report to discover applications.</p>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="developerShieldDialog" class="developer-shield-dialog" aria-labelledby="developerShieldTitle">
+    <div class="developer-shield-shell">
+      <div class="dialog-head">
+        <div>
+          <h2 id="developerShieldTitle">Check Developer Mode</h2>
+          <p>Privacy Protector reads the real iPhone state and does not claim a change it did not make.</p>
+        </div>
+        <button id="closeDeveloperShield" class="dialog-close" type="button" aria-label="Close">×</button>
+      </div>
+
+      <section id="developerModeState" class="developer-mode-state checking" aria-live="polite" aria-busy="true">
+        <span class="developer-state-mark" aria-hidden="true"></span>
+        <div>
+          <strong id="developerModeStatus">Checking the iPhone...</strong>
+          <p id="developerModeDetail">Reading the Developer Mode state reported by iOS.</p>
+        </div>
+      </section>
+
+      <div class="developer-mode-proof">
+        <strong>Developer Mode is hidden from applications only when it is disabled on the iPhone</strong>
+        <p>When disabled, applications cannot observe it as enabled. This tool does not inject code or bypass application security checks.</p>
+      </div>
+
+      <div class="developer-mode-path">
+        <span>Disable path when needed</span>
+        <strong>Settings > Privacy & Security > Developer Mode > Off</strong>
+        <small>If the iPhone requests a restart, complete it and then select Check Now.</small>
+      </div>
+
+      <div class="developer-mode-actions">
+        <button id="dismissDeveloperShield" type="button">Close</button>
+        <button id="refreshDeveloperMode" class="developer-check-button" type="button">Check Now</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="permissionDialog" class="permission-dialog" aria-labelledby="permissionDialogTitle">
+    <div class="permission-dialog-shell">
+      <div class="dialog-head">
+        <div>
+          <h2 id="permissionDialogTitle">Application Permission Center</h2>
+          <p>Record your choices, observe real use, and verify again after changing iPhone settings.</p>
+        </div>
+        <button id="closePermissionDialog" class="dialog-close" type="button" aria-label="Close">×</button>
+      </div>
+
+      <article class="global-protection-card">
+        <div>
+          <strong>Balanced Protection</strong>
+          <p>Applies privacy-first defaults while keeping application and hostname exceptions under your control.</p>
+        </div>
+        <div class="global-protection-state">
+          <span id="globalProtectionStatus">Permission defaults active</span>
+          <small><strong id="globalProtectionRules">0</strong> exact rules - location, motion, and tracking default to deny</small>
+        </div>
+      </article>
+
+      <div class="permission-app-bar">
+        <label>
+          <span>Application</span>
+          <select id="permissionApp" aria-label="Application whose permissions are being reviewed"></select>
+        </label>
+        <div class="permission-identity">
+          <code id="permissionBundle">—</code>
+          <small id="permissionProcess">Process name: —</small>
+        </div>
+      </div>
+
+      <div class="permission-grid" aria-label="Permission choices">
+        <article class="permission-card" data-permission="location">
+          <div class="permission-card-head">
+            <div>
+              <strong>Location</strong>
+              <small>Coordinates and CLLocation updates</small>
+            </div>
+            <span id="locationObserved" class="permission-status unknown">Not checked</span>
+          </div>
+          <div class="permission-choice" role="group" aria-label="Location permission choice">
+            <button type="button" data-value="allow">Allow</button>
+            <button type="button" data-value="monitor">Monitor</button>
+            <button type="button" data-value="deny">Deny</button>
+          </div>
+          <p id="locationEvidence">No saved verification result.</p>
+        </article>
+
+        <article class="permission-card" data-permission="motion">
+          <div class="permission-card-head">
+            <div>
+              <strong>Motion and Sensors</strong>
+              <small>Acceleration, rotation, and device orientation</small>
+            </div>
+            <span id="motionObserved" class="permission-status unknown">Not checked</span>
+          </div>
+          <div class="permission-choice" role="group" aria-label="Motion permission choice">
+            <button type="button" data-value="allow">Allow</button>
+            <button type="button" data-value="monitor">Monitor</button>
+            <button type="button" data-value="deny">Deny</button>
+          </div>
+          <p id="motionEvidence">No saved verification result.</p>
+        </article>
+
+        <article class="permission-card" data-permission="tracking">
+          <div class="permission-card-head">
+            <div>
+              <strong>Advertising Tracking</strong>
+              <small>App Tracking Transparency status</small>
+            </div>
+            <span id="trackingObserved" class="permission-status unknown">Not checked</span>
+          </div>
+          <div class="permission-choice" role="group" aria-label="Tracking permission choice">
+            <button type="button" data-value="allow">Allow</button>
+            <button type="button" data-value="monitor">Monitor</button>
+            <button type="button" data-value="deny">Deny</button>
+          </div>
+          <p id="trackingEvidence">No saved verification result.</p>
+        </article>
+      </div>
+
+      <section id="privacyFinding" class="privacy-finding neutral" aria-live="polite">
+        <div class="privacy-finding-copy">
+          <strong id="privacyFindingTitle">No classification yet</strong>
+          <p id="privacyFindingText">Run a verification session to distinguish permitted use from a privacy-choice violation.</p>
+        </div>
+        <div id="privacyFindingTags" class="privacy-finding-tags"></div>
+      </section>
+
+      <section class="privacy-response-strip" aria-label="Privacy protection response">
+        <div>
+          <span>Severity</span>
+          <strong id="privacySeverity">Not evaluated</strong>
+        </div>
+        <div>
+          <span>Protection action</span>
+          <strong id="privacyProtectionAction">Waiting for verification</strong>
+        </div>
+        <div>
+          <span>Incident history</span>
+          <strong id="privacyIncidentCount">No saved incidents</strong>
+        </div>
+        <button id="exportPrivacyIncidents" type="button">Export History</button>
+      </section>
+
+      <article class="system-protection-card">
+        <div class="system-protection-copy">
+          <div>
+            <strong>System-state Protection</strong>
+            <small>Supports exact blocking after evidence identifies a device-state receiver hostname.</small>
+          </div>
+          <span id="systemProtectionStatus" class="permission-status unknown">Monitor only</span>
+        </div>
+        <div class="system-protection-choice" role="group" aria-label="System-state protection choice">
+          <button type="button" data-value="monitor">Monitor only</button>
+          <button type="button" data-value="block">Block transmission</button>
+        </div>
+        <p id="systemProtectionEvidence">Reviewed hostname actions remain explicit and reversible in the operations workspace.</p>
+      </article>
+
+      <article class="containment-card manual-containment-card">
+        <div class="containment-copy">
+          <div>
+            <strong>Manual enforcement decision</strong>
+            <small>Shows related hostnames without transferring or blocking them automatically.</small>
+          </div>
+          <span id="containmentStatus" class="permission-status observed">Manual</span>
+        </div>
+        <p id="containmentEvidence">Transfer a selected hostname from activity to actions, then choose the policy yourself.</p>
+      </article>
+
+      <div class="permission-guidance">
+        <div>
+          <strong>Permission changes are made on the iPhone</strong>
+          <p id="permissionInstruction">Choose Deny on a card to see the relevant iPhone setting.</p>
+        </div>
+        <span>Privacy Protector records your choice and verifies evidence without claiming a change it did not make.</span>
+      </div>
+
+      <div class="permission-monitor">
+        <div>
+          <strong id="permissionCaptureTitle">Live verification is stopped</strong>
+          <p id="permissionCaptureStatus">Start verification, use the application on the iPhone, then stop to analyze location, motion, and tracking evidence.</p>
+        </div>
+        <div class="permission-monitor-actions">
+          <button id="savePermissionPolicy" type="button">Save Choices</button>
+          <button id="startPermissionCapture" class="scan-start" type="button">Start Verification</button>
+          <button id="stopPermissionCapture" class="scan-stop" type="button" disabled>Stop and Analyze</button>
+        </div>
+      </div>
+
+      <div id="permissionSdkSummary" class="permission-sdk-summary">
+        No verification session has been recorded for these permissions.
+      </div>
+    </div>
+  </dialog>
+  <script src="app.js?v=1.0.1"></script>
+</body>
+</html>
