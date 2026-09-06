@@ -625,5 +625,10 @@ Release history: see `CHANGELOG.md`.
 
 ## License
 
+Copyright (C) 2026 ibnkabed.
+
 This project is licensed under the GNU Affero General Public License v3.0.
-See `LICENSE` for the full text.
+See `LICENSE` for the full text and `NOTICE` for the copyright notice.
+
+Anyone who distributes this program, or offers a modified version of it over a
+network, must make the corresponding source available under the same license.
