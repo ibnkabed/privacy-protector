@@ -15,9 +15,7 @@ Privacy Protector is defensive: it does not jailbreak the phone, inject code, pa
 applications, read account data, or sit between an application and its encrypted payload.
 Its protection boundary is DNS and local evidence analysis.
 
-<!-- SCREENSHOT: place the sanitized main dashboard capture here.
-     ![Privacy Protector dashboard](docs/screenshots/dashboard.png)
-     See docs/screenshots/README.md for what to capture and how to sanitize it. -->
+![The Privacy Protector dashboard: live DNS activity on the left with a green, orange, or red classification and a stated reason for every hostname, and the manual protection actions workspace on the right.](docs/screenshots/dashboard.png)
 
 ---
 
@@ -125,11 +123,17 @@ The dashboard is a single English LTR page with local JavaScript state and loopb
 
 The two main dashboard panels do not use previous/next pagination or nested vertical scrolling. All matching activity rows that are not currently transferred and all privacy-protection operations are rendered in full, and the browser page provides the single vertical scrollbar for reviewing them from top to bottom.
 
-<!-- SCREENSHOT: classification detail - a domain with its reason and confidence.
-     ![Domain classification detail](docs/screenshots/classification.png) -->
+Every activity row carries its classification, the reason behind it, the record
+type, the observation count, and the confidence. The attribution column states
+where the application name came from, or says plainly that the row is DNS only.
 
-<!-- SCREENSHOT: DNS self-test and measured coverage state.
-     ![DNS self-test and coverage](docs/screenshots/self-test.png) -->
+![Activity rows showing each hostname's classification, stage, record type, observation count, and confidence.](docs/screenshots/classification.png)
+
+The engine strip reports what was actually measured rather than a detection
+percentage: transports received, healthy DoH providers, the permanent hostname
+count by color, how many have been studied, and the last self-test result.
+
+![The DNS engine strip after a self-test, showing UDP and TCP receipt, both DoH providers healthy, and the classification counts.](docs/screenshots/self-test.png)
 
 
 ## Check Developer Mode
