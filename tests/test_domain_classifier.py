@@ -4,6 +4,7 @@ import tempfile
 import threading
 import unittest
 import urllib.request
+from datetime import datetime
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
@@ -138,7 +139,12 @@ class DomainClassificationV3Tests(unittest.TestCase):
             self.assertEqual(engine.get('timed.example')['lastObservedAt'], '')
             engine.observe('timed.example', qtype='A', observed_at='2026-08-01T10:00:00+03:00', schedule=False)
             engine.observe('timed.example', qtype='AAAA', observed_at='2026-08-01T09:00:00+03:00', schedule=False)
-            self.assertEqual(engine.get('timed.example')['lastObservedAt'], '2026-08-01T10:00:00+03:00')
+            # The engine normalizes to machine-local time, so compare the instant,
+            # not the rendered offset, or the test only passes in one timezone.
+            self.assertEqual(
+                datetime.fromisoformat(engine.get('timed.example')['lastObservedAt']),
+                datetime.fromisoformat('2026-08-01T10:00:00+03:00'),
+            )
 
     def test_privacy_capture_evidence_overrides_to_red_and_persists(self):
         with tempfile.TemporaryDirectory() as folder:

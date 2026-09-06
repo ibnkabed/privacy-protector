@@ -246,7 +246,8 @@ tbody tr:hover{background:#f8fbfc}
 }
 .policy-main{display:flex;min-width:0;align-items:center;justify-content:space-between;gap:7px}
 .policy-domain{
-  flex:1;min-width:0;display:grid;gap:2px;align-items:start;
+  flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);
+  gap:2px;align-items:start;
 }
 .policy-domain strong{
   display:block;white-space:normal;overflow-wrap:anywhere;
@@ -255,6 +256,7 @@ tbody tr:hover{background:#f8fbfc}
 .policy-classification{
   grid-area:tag;display:inline-block;padding:2px 5px;border-radius:999px;
   color:#b5c5cf;background:#1b2a34;font-size:7.5px;font-weight:700;white-space:nowrap;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;
 }
 .policy-classification.risk-green{color:#166847;background:#e4f7ee}
 .policy-classification.risk-orange{color:#8b4c05;background:#fff1d9}
