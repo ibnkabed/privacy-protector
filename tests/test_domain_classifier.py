@@ -160,6 +160,22 @@ class DomainClassificationV3Tests(unittest.TestCase):
             self.assertTrue(entry['developerModeCheck'])
             self.assertNotIn('functions', reloaded.snapshot())
 
+    def test_catalog_refresh_keeps_a_locally_confirmed_red_category(self):
+        # A reviewed catalog host that is already red must not have its locally
+        # confirmed violation category overwritten by a later catalog refresh.
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'domain-classifications.json'
+            engine = DomainClassificationEngine(path, active_analysis=False, probe=FakeProbe())
+            engine.observe('analytics.tiktok.com', schedule=False)
+            self.assertEqual(engine.analyze('analytics.tiktok.com')['risk'], 'red')
+            engine.mark_privacy_evidence(['analytics.tiktok.com'], violations=['motion'])
+            self.assertEqual(engine.get('analytics.tiktok.com')['category'], 'confirmed_privacy_violation')
+            reloaded = DomainClassificationEngine(path, active_analysis=False, probe=FakeProbe())
+            entry = reloaded.get('analytics.tiktok.com')
+            self.assertEqual(entry['risk'], 'red')
+            self.assertEqual(entry['category'], 'confirmed_privacy_violation')
+            self.assertEqual(entry['confidence'], 99)
+
     def test_bootstrap_uses_bundle_maps_and_separates_privacy_from_developer_evidence(self):
         with tempfile.TemporaryDirectory() as folder:
             engine = self.make_engine(folder)

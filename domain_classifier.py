@@ -214,7 +214,10 @@ class DomainClassificationEngine:
         fresh = DomainClassificationEngine._base_entry(domain)
         previous_risk = str(entry.get('risk') or '')
         local_evidence = any((str(item).startswith('Evidence-based privacy classification.') for item in entry.get('evidence', [])))
-        preserve_local_red = local_evidence and previous_risk == 'red' and (RISK_ORDER.get(fresh['risk'], 0) < RISK_ORDER['red'])
+        # Local confirmed evidence outranks the reviewed catalog even when the
+        # catalog also says red, so a refresh cannot replace
+        # 'confirmed_privacy_violation' with a generic category.
+        preserve_local_red = local_evidence and previous_risk == 'red'
         changed = False
         for key in ('risk', 'riskLabel', 'category', 'categoryLabel', 'stage', 'stageLabel', 'confidence', 'confidenceLabel', 'summary', 'reason', 'privacyRelevant', 'deviceDataAccess', 'developerModeCheck', 'analyzedAt'):
             if preserve_local_red and key in {'risk', 'riskLabel', 'category', 'categoryLabel', 'stage', 'stageLabel', 'confidence', 'confidenceLabel', 'summary', 'reason', 'privacyRelevant', 'deviceDataAccess', 'developerModeCheck', 'analyzedAt'}:

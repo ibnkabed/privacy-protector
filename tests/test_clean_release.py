@@ -15,16 +15,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def free_port() -> int:
-    for _ in range(20):
+    # Keep the TCP socket bound while probing UDP. Releasing it first lets another
+    # process claim the port in between, which is what exhausts the attempts on a
+    # busy CI runner.
+    for _ in range(100):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
             listener.bind(("127.0.0.1", 0))
             port = listener.getsockname()[1]
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as datagram:
-                datagram.bind(("127.0.0.1", port))
-            return port
-        except OSError:
-            continue
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as datagram:
+                    datagram.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+        return port
     raise RuntimeError("Could not reserve a temporary TCP/UDP port")
 
 
