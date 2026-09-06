@@ -27,6 +27,13 @@ jobs:
       # library. `pymobiledevice3` is required at runtime for the optional
       # paired-iPhone features, which need real hardware and are therefore not
       # exercised here. The suite is deterministic and needs no public internet.
+      # tests/test_domain_classifier.py asserts a local-time string with a
+      # +03:00 offset, so the runner clock must match the development machine.
+      - name: Pin the runner timezone
+        run: |
+          tzutil /s "Arab Standard Time"
+          tzutil /g
+
       - name: Show interpreter
         run: python -VV
 
