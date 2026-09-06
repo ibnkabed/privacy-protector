@@ -94,6 +94,13 @@ class CleanReleaseRuntimeTests(unittest.TestCase):
                 self.assertTrue(status.get("ok"))
                 self.assertTrue(request_json(base + "/api/dns/cache", "DELETE").get("ok"))
 
+                # Dashboard assets must be revalidated, or an updated styles.css
+                # keeps loading from the browser cache after an upgrade.
+                with urllib.request.urlopen(base + "/styles.css", timeout=5) as asset:
+                    self.assertEqual(asset.headers.get("Cache-Control"), "no-cache")
+                with urllib.request.urlopen(base + "/api/health", timeout=5) as health:
+                    self.assertEqual(health.headers.get("Cache-Control"), "no-store")
+
                 runtime_root = Path(runtime).resolve()
                 generated = [path.resolve() for path in runtime_root.rglob("*") if path.is_file()]
                 self.assertTrue(generated)

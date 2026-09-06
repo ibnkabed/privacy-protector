@@ -1164,6 +1164,14 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def end_headers(self) -> None:
         self.send_header('Content-Security-Policy', "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
         self.send_header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        # Dashboard assets carry no version in their URL, so without an explicit
+        # revalidation hint a browser can keep serving a stale styles.css or
+        # app.js after an update. JSON replies already set no-store above.
+        if not any(
+            line.lower().startswith(b'cache-control:')
+            for line in getattr(self, '_headers_buffer', [])
+        ):
+            self.send_header('Cache-Control', 'no-cache')
         super().end_headers()
 
 def start_dns(resolver: Resolver, host: str, port: int) -> tuple[Any, Any]:
