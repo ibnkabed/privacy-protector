@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: unittest on windows-latest / Python 3.12
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The dashboard, DNS engine, and classifier use only the Python standard
+      # library. `pymobiledevice3` is required at runtime for the optional
+      # paired-iPhone features, which need real hardware and are therefore not
+      # exercised here. The suite is deterministic and needs no public internet.
+      - name: Show interpreter
+        run: python -VV
+
+      - name: Run the test suite
+        env:
+          PYTHONUTF8: '1'
+        run: python -m unittest discover -s tests -v

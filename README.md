@@ -1,30 +1,50 @@
 # Privacy Protector
 
-Privacy Protector is a local-first Windows application for inspecting iPhone network activity, analyzing Apple App Privacy Report files, applying reversible exact-domain DNS rules, and recording privacy-permission verification results from a paired iPhone. DNS Engine V3 preserves the resilient V2 transport core and adds permanent evidence-based domain classification with immediate preliminary results, bounded public-metadata study, purpose-aware application context, and explicit green, orange, and red privacy states without payload interception. A lightweight background launcher can keep all DNS hostnames that traverse the engine under observation from Windows sign-in, even while the dashboard window is closed.
+[![Tests](https://github.com/ibnkabed/privacy-protector/actions/workflows/tests.yml/badge.svg)](https://github.com/ibnkabed/privacy-protector/actions/workflows/tests.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 
-The project is defensive. It does not jailbreak the phone, inject code, patch iOS applications, bypass application security checks, read account data, or place itself between an application and its encrypted payload. Its protection boundary is DNS and local evidence analysis.
+**See every domain your iPhone talks to — and block the ones you don't want.
+Runs on your own Windows PC. No cloud, no account, no jailbreak.**
 
-## Independent origin
+- **Local-first.** The dashboard is bound to loopback and every record stays on your machine.
+- **Exact-domain blocking.** Complete hostnames only, never wildcards, and every decision is reversible.
+- **Evidence, not guesses.** Each domain carries the reason and confidence behind its green, orange, or red state.
 
-Privacy Protector began as an individual response to recurring privacy concerns observed across everyday applications. It was conceived, designed, and implemented independently, with an emphasis on transparent evidence, local control, reversible decisions, and clearly stated technical limits.
+Privacy Protector is defensive: it does not jailbreak the phone, inject code, patch iOS
+applications, read account data, or sit between an application and its encrypted payload.
+Its protection boundary is DNS and local evidence analysis.
 
-## Technical overview
+<!-- SCREENSHOT: place the sanitized main dashboard capture here.
+     ![Privacy Protector dashboard](docs/screenshots/dashboard.png)
+     See docs/screenshots/README.md for what to capture and how to sanitize it. -->
 
-| Item | Description |
-|---|---|
-| Operating model | Local Windows application with an English LTR web interface |
-| Backend | Python standard-library HTTP server, the isolated `dns_engine.py` protocol engine, and `domain_classifier.py` for V3 classification |
-| Frontend | Static HTML, CSS, and vanilla JavaScript |
-| Dashboard address | `http://127.0.0.1:8733` |
-| Test DNS port | `53053` |
-| iPhone DNS port | `53` over UDP and TCP |
-| Primary upstream resolver | Cloudflare DNS-over-HTTPS at `https://cloudflare-dns.com/dns-query` |
-| Fallback upstream resolver | Google Public DNS-over-HTTPS at `https://dns.google/dns-query` |
-| DNS cache | Memory-only, bounded to `2,048` entries, with positive and negative TTL enforcement |
-| Coverage and self-test | Measured UDP, TCP, provider, cache, client-attribution, error, and self-test state |
-| Python baseline | Python `3.12` |
-| Paired-device connector | `pymobiledevice3` for optional iPhone inventory, read-only status, user-initiated evidence capture, and USB packet attribution |
-| Automated validation | Deterministic protocol, cache, local mock-DoH integration, concurrency, V3 classification, safe-probe, API, UI-contract, and privacy-documentation coverage |
+---
+
+## Quick start
+
+Windows with PowerShell `7` and Python `3.12`. Paired-iPhone features are optional.
+
+```powershell
+git clone https://github.com/ibnkabed/privacy-protector.git
+cd privacy-protector
+python -m pip install -r requirements.txt
+.\Start-Privacy-Protector.ps1
+```
+
+The dashboard opens at `http://127.0.0.1:8733` and DNS listens on test port `53053`.
+Nothing on the computer or the iPhone is reconfigured by this step.
+
+To protect an actual iPhone, run the scoped firewall preparation once, then set the
+iPhone's Wi-Fi DNS server to this machine's displayed local address:
+
+```powershell
+.\Prepare-iPhone-Connection.ps1 -StartBackend
+```
+
+Full details for both paths are in **Local test launch** and **iPhone connection mode** below.
+
+---
 
 ## What the application does
 
@@ -41,27 +61,6 @@ Privacy Protector combines related privacy workflows in one local dashboard.
 | Permission verification | On explicit user request, captures a selected iOS process log and a parallel system log, then searches for location, motion, tracking, SDK, and development-environment indicators | It cannot directly revoke another application's iOS permissions, continuously measure internal function calls, or prove that an unobserved action never occurred |
 | Manual operations review | Moves a selected hostname out of the activity presentation and into a separate operations workspace with timing, filtering, and sorting | Transfer alone does not create, change, or delete a DNS rule; enforcement still requires an explicit hostname action |
 | Lightweight background service | Starts at Windows sign-in when installed, listens for every DNS request that reaches the configured resolver, maintains classification, and continues after the dashboard closes | It does not start a second continuous iPhone observer, continuously capture iOS logs, or see traffic that bypasses the configured DNS path |
-
-## Core design principles
-
-| Principle | Implementation |
-|---|---|
-| Local-first | The dashboard is bound to loopback by default and runtime state is stored as local JSON or NDJSON files |
-| Exact matching | DNS rules match complete normalized hostnames only; wildcard blocking is intentionally not used |
-| Reversible decisions | Every managed domain can be changed among allow, monitor, and block, or removed from policy |
-| Conservative attribution | General DNS activity is not assigned to an application without report or session evidence |
-| Visible attribution provenance | Every activity application label states whether it came from exact iOS process metadata, an Apple App Privacy Report, saved profile evidence, or DNS-only traffic with no attribution |
-| Honest device control | Developer Mode is read from the paired iPhone but is never changed remotely |
-| Privacy-first defaults | New monitored applications default to deny for location, motion, and tracking; DNS enforcement remains a separate manual decision |
-| Manual enforcement | Discovery, classification, and permission evidence never create or restore DNS policy automatically; the user explicitly moves a hostname into operations and then selects allow, monitor, or block |
-| Bounded resilience | Public DoH failures use a separately configurable fallback, upstream waits are bounded, and a recovered primary is selected again |
-| TTL-correct caching | Positive and negative answers expire according to DNS TTL data; cached transaction IDs and remaining TTLs are rewritten per client response |
-| Measured coverage | The interface reports what the engine actually received and tested instead of publishing an unsupported detection percentage |
-| Permanent classification inventory | Clearing DNS activity, moving a hostname into operations, or hiding an operations-tray item never deletes its permanent V3 domain record; moving it changes presentation only and removes the duplicate activity row while it remains in operations |
-| Separated meanings | DNS record type, policy action, application process, host-purpose category, privacy risk, analysis stage, and confidence are stored and displayed as separate concepts |
-| Operations/policy separation | The browser stores the visible operations tray independently from exact-domain policy; removing or clearing an operations-tray item never deletes or changes its saved DNS rule |
-| Purpose-aware context | Expected first-party access required by an optional health or fitness application's declared purpose can be capped at orange, while unrelated third-party advertising, attribution, or behavioral analytics retains its independent red classification |
-| Lightweight continuity | The sign-in launcher starts one hidden DNS/classification service only; optional USB packet attribution and user-initiated log capture are separate and are not enabled by the normal background path |
 
 ## Architecture
 
@@ -91,7 +90,139 @@ flowchart LR
     UI -->|"explicit user decision"| POLICY
 ```
 
+## Known limitations
+
+| Limitation | Consequence |
+|---|---|
+| DNS sees hostnames, not encrypted application payloads | The tool cannot determine what data was sent inside HTTPS |
+| General DNS requests lack process identity | Exact names require USB `pcapd` process metadata or Apple report evidence; without either, the row remains visibly labeled `DNS only` rather than receiving a guessed application name |
+| Encrypted DNS and direct encrypted connections hide the DNS question | Apple packet metadata may still expose a process name, but Privacy Protector does not decrypt DoH, DoT, HTTPS, or application payloads and cannot create a hostname attribution from ciphertext |
+| DNS cannot measure internal application functions | The application does not maintain a function inventory or infer an internal call from a hostname; user-initiated log analysis is limited to observable evidence indicators and an absence of evidence is not proof of absence |
+| Exact matching has no wildcard coverage | New subdomains require separate rules |
+| DNS coverage is path-dependent | Cellular bypass, in-app encrypted DNS, direct IP use, answers cached before observation, VPN or alternate DNS profiles, and Wi-Fi interruptions can be invisible |
+| A possible network client is not confirmed as the iPhone | Configure the exact iPhone address explicitly or use separate system evidence before claiming attribution |
+| DNSSEC is not validated locally | EDNS and DNSSEC wire data are preserved, but validation behavior belongs to the selected upstream resolver |
+| Public DoH providers receive resolution traffic | The active provider receives the DNS wire query and public source address; provider privacy policies and availability remain external dependencies |
+| iOS permissions cannot be changed by this desktop program | The interface provides the correct Settings guidance and verifies later evidence |
+| Developer Mode is read-only | The user must turn it off directly on the iPhone |
+| Paired-device features depend on Apple pairing and local discovery | A locked, disconnected, untrusted, or unreachable phone produces an unavailable state |
+| Specialized endpoint mappings are intentionally absent | Add reviewed organization-specific mappings only through local configuration kept outside distributable source |
+| Runtime data is private local state | It is stored under `%LOCALAPPDATA%\PrivacyProtector\data` and should be backed up separately from the source tree |
+| Paired-device dependencies are substantial | Install the pinned requirement in a virtual environment; the DNS and dashboard core remains standard-library based |
+
+## User interface
+
+The dashboard is a single English LTR page with local JavaScript state and loopback API calls.
+
+| Area | Main controls | Behavior |
+|---|---|---|
+| Header | **Check Developer Mode**, permission center, detected applications, report import | Opens local dialogs or reads a local file; no remote upload is performed |
+| Summary cards | Rows, monitored apps, domains, blocked rules | Shows the current report, local inventory, and DNS service status |
+| DNS engine strip | UDP/TCP receipt, healthy DoH providers, client-attribution state, self-test, and **V3 Study** | Reports measured state compactly and queues bounded study for preliminary entries |
+| Activity table | Application filter, risk filter, V3 study, and sorting by latest time, application, hostname, or classification | Displays every matching live DNS event, imported report row, and permanent V3 hostname except items currently shown in operations; each application name includes its attribution source, and DNS-only rows are labeled as unattributed |
+| Protection operations | Manual hostname transfer, filter, sorting by latest observation, latest block, name, or classification, allow/monitor/block controls, removal from the workspace, and blocklist export | Starts empty, displays only hostnames the user transfers from activity, shows latest observation and block timing plus counts, and creates no policy until the user explicitly selects an action |
+| Permission center | Desired permission choices, system protection, manual action recommendations, capture controls, and incident export | Saves choices, starts paired-iPhone evidence capture, analyzes results, and exports incident JSON without automatic containment |
+
+The two main dashboard panels do not use previous/next pagination or nested vertical scrolling. All matching activity rows that are not currently transferred and all privacy-protection operations are rendered in full, and the browser page provides the single vertical scrollbar for reviewing them from top to bottom.
+
+<!-- SCREENSHOT: classification detail - a domain with its reason and confidence.
+     ![Domain classification detail](docs/screenshots/classification.png) -->
+
+<!-- SCREENSHOT: DNS self-test and measured coverage state.
+     ![DNS self-test and coverage](docs/screenshots/self-test.png) -->
+
+
+## Check Developer Mode
+
+The **Check Developer Mode** button is located in the dashboard header. It opens a dedicated dialog and asks the local backend to read the real Developer Mode state from the paired iPhone through `/api/developer-mode/status`.
+
+| Result | Meaning shown to the user |
+|---|---|
+| Developer Mode is off | The dialog confirms that Developer Mode is not active and is therefore not exposed to applications as an enabled device state |
+| Developer Mode is on | The dialog explains that it remains visible to applications and directs the user to turn it off in iPhone Settings, then use **Check now** to verify again |
+| Device is unavailable | The dialog explains that the iPhone, pairing record, connector, or local-network discovery could not be reached and offers another check |
+
+The button is deliberately read-only. It does not spoof the device state, conceal an enabled Developer Mode, bypass an application's security checks, or turn Developer Mode off remotely. The actual change must be made on the iPhone; Privacy Protector only verifies the resulting state and reports it honestly.
+
+---
+
+## Internals
+
+Everything below documents how the engine works, what it stores, and what it refuses to do.
+Long reference tables are collapsed; nothing is omitted.
+
+## Technical overview
+
+| Item | Description |
+|---|---|
+| Operating model | Local Windows application with an English LTR web interface |
+| Backend | Python standard-library HTTP server, the isolated `dns_engine.py` protocol engine, and `domain_classifier.py` for V3 classification |
+| Frontend | Static HTML, CSS, and vanilla JavaScript |
+| Dashboard address | `http://127.0.0.1:8733` |
+| Test DNS port | `53053` |
+| iPhone DNS port | `53` over UDP and TCP |
+| Primary upstream resolver | Cloudflare DNS-over-HTTPS at `https://cloudflare-dns.com/dns-query` |
+| Fallback upstream resolver | Google Public DNS-over-HTTPS at `https://dns.google/dns-query` |
+| DNS cache | Memory-only, bounded to `2,048` entries, with positive and negative TTL enforcement |
+| Coverage and self-test | Measured UDP, TCP, provider, cache, client-attribution, error, and self-test state |
+| Python baseline | Python `3.12` |
+| Paired-device connector | `pymobiledevice3` for optional iPhone inventory, read-only status, user-initiated evidence capture, and USB packet attribution |
+| Automated validation | Deterministic protocol, cache, local mock-DoH integration, concurrency, V3 classification, safe-probe, API, UI-contract, and privacy-documentation coverage |
+
+## DNS Engine V3 classification model
+
+V3 does not derive privacy risk from the policy action. A manually blocked host is not automatically red, and an allowed host is not automatically green. The classification engine evaluates purpose and evidence independently; policy remains the separate enforcement choice.
+
+| Color | V3 meaning | Typical evidence |
+|---|---|---|
+| Green | Functional, first-party, authentication, content, update, security, or privacy-protection infrastructure with no identified device-privacy intrusion | Reviewed provider role, functional hostname, certificate/HTTPS metadata, or infrastructure relationship |
+| Orange | The service can use operational device, diagnostic, notification, subscription, product, or expected first-party health/fitness data, but the available evidence does not establish unrelated tracking or a confirmed denied-privacy violation | Crash reports, logging, push delivery, installation identifiers, device provisioning, multi-purpose services, or reviewed first-party access that is integral to an optional health application's declared purpose |
+| Red | Tracking, third-party advertising attribution, behavior/session analytics, audience identity, unrelated collection of location/motion/health data, a locally confirmed denied-permission use, or a reviewed device-integrity check | Reviewed vendor documentation, explicit analytics/advertising role, App Privacy Report context, local permission violation, containment evidence, or development-environment indicators tied to an endpoint |
+
+Every entry also has an analysis stage. `preliminary` is an immediate machine classification and remains visibly labeled as preliminary. `studied` means that the engine has reviewed an exact catalog record, local permission evidence, or bounded public DNS/HTTPS metadata. Confidence remains explicit because a hostname and public root response still cannot reveal an encrypted API path or request body.
+
+Application purpose is contextual evidence, not a blanket exception. A reviewed optional health or fitness app can make expected first-party health access orange at most, because that access is intrinsic to the app's user-selected purpose. The same app's third-party advertising, attribution, or behavioral analytics domains are still evaluated independently and can remain red. Government, medical-record, appointment, or other sensitive services are not automatically treated as optional health readers.
+
+The bundled catalogue contains only neutral reserved examples. Organization-specific mappings belong in local configuration and must remain separate from distributable source while the generic classification engine retains its three-color contract.
+
+## Manual exact-domain policy
+
+Startup does not add, restore, or change DNS rules. Reviewed advertising, analytics, attribution, diagnostics, and device-environment mappings improve classification only. They do not become policy until the user explicitly moves a hostname from activity to operations and selects allow, monitor, or block.
+
+The mode deliberately avoids wildcard rules. Blocking `example.test` does not block `api.example.test`, and blocking `api.example.test` does not block the parent domain. This reduces accidental breakage but means every protected hostname must be known explicitly.
+
+Application-specific endpoint catalogues are implementation data and should contain only reviewed, purpose-specific mappings. Exact matching keeps every decision narrow, inspectable, and reversible.
+
+## Core design principles
+
+<details>
+<summary>Show the full principles table</summary>
+
+| Principle | Implementation |
+|---|---|
+| Local-first | The dashboard is bound to loopback by default and runtime state is stored as local JSON or NDJSON files |
+| Exact matching | DNS rules match complete normalized hostnames only; wildcard blocking is intentionally not used |
+| Reversible decisions | Every managed domain can be changed among allow, monitor, and block, or removed from policy |
+| Conservative attribution | General DNS activity is not assigned to an application without report or session evidence |
+| Visible attribution provenance | Every activity application label states whether it came from exact iOS process metadata, an Apple App Privacy Report, saved profile evidence, or DNS-only traffic with no attribution |
+| Honest device control | Developer Mode is read from the paired iPhone but is never changed remotely |
+| Privacy-first defaults | New monitored applications default to deny for location, motion, and tracking; DNS enforcement remains a separate manual decision |
+| Manual enforcement | Discovery, classification, and permission evidence never create or restore DNS policy automatically; the user explicitly moves a hostname into operations and then selects allow, monitor, or block |
+| Bounded resilience | Public DoH failures use a separately configurable fallback, upstream waits are bounded, and a recovered primary is selected again |
+| TTL-correct caching | Positive and negative answers expire according to DNS TTL data; cached transaction IDs and remaining TTLs are rewritten per client response |
+| Measured coverage | The interface reports what the engine actually received and tested instead of publishing an unsupported detection percentage |
+| Permanent classification inventory | Clearing DNS activity, moving a hostname into operations, or hiding an operations-tray item never deletes its permanent V3 domain record; moving it changes presentation only and removes the duplicate activity row while it remains in operations |
+| Separated meanings | DNS record type, policy action, application process, host-purpose category, privacy risk, analysis stage, and confidence are stored and displayed as separate concepts |
+| Operations/policy separation | The browser stores the visible operations tray independently from exact-domain policy; removing or clearing an operations-tray item never deletes or changes its saved DNS rule |
+| Purpose-aware context | Expected first-party access required by an optional health or fitness application's declared purpose can be capped at orange, while unrelated third-party advertising, attribution, or behavioral analytics retains its independent red classification |
+| Lightweight continuity | The sign-in launcher starts one hidden DNS/classification service only; optional USB packet attribution and user-initiated log capture are separate and are not enabled by the normal background path |
+
+</details>
+
 ## End-to-end data flow
+
+<details>
+<summary>Show the full stage-by-stage data flow table</summary>
 
 | Stage | Input | Processing | Stored result |
 |---|---|---|---|
@@ -113,7 +244,12 @@ flowchart LR
 | Permission capture | User-started app-specific log plus a parallel system log | Detects observable location, motion, tracking, generic system-protection signals, and development-environment indicators | Last result, evaluation, and optional incident under the private runtime directory; no continuous internal-function inventory |
 | Manual protection decision | A confirmed violation identifies related reviewed endpoints | Stores the violation, marks linked endpoints red/studied, and recommends candidate hostnames without changing policy | Permanent evidence remains in the activity inventory until the user moves a hostname into operations and chooses an action |
 
+</details>
+
 ## Privacy evidence model
+
+<details>
+<summary>Show the evidence and evaluation table</summary>
 
 The permission center stores what the user wants, what the latest capture observed, and an evaluation that compares the two.
 
@@ -127,58 +263,12 @@ The permission center stores what the user wants, what the latest capture observ
 
 An incident is created only when a category set to `deny` is observed as used or authorized. Incidents are marked high severity, saved locally, deduplicated by capture time, bundle ID, and violated categories, and limited to the latest `200` records.
 
-## Manual exact-domain policy
-
-Startup does not add, restore, or change DNS rules. Reviewed advertising, analytics, attribution, diagnostics, and device-environment mappings improve classification only. They do not become policy until the user explicitly moves a hostname from activity to operations and selects allow, monitor, or block.
-
-The mode deliberately avoids wildcard rules. Blocking `example.test` does not block `api.example.test`, and blocking `api.example.test` does not block the parent domain. This reduces accidental breakage but means every protected hostname must be known explicitly.
-
-Application-specific endpoint catalogues are implementation data and should contain only reviewed, purpose-specific mappings. Exact matching keeps every decision narrow, inspectable, and reversible.
-
-## DNS Engine V3 classification model
-
-V3 does not derive privacy risk from the policy action. A manually blocked host is not automatically red, and an allowed host is not automatically green. The classification engine evaluates purpose and evidence independently; policy remains the separate enforcement choice.
-
-| Color | V3 meaning | Typical evidence |
-|---|---|---|
-| Green | Functional, first-party, authentication, content, update, security, or privacy-protection infrastructure with no identified device-privacy intrusion | Reviewed provider role, functional hostname, certificate/HTTPS metadata, or infrastructure relationship |
-| Orange | The service can use operational device, diagnostic, notification, subscription, product, or expected first-party health/fitness data, but the available evidence does not establish unrelated tracking or a confirmed denied-privacy violation | Crash reports, logging, push delivery, installation identifiers, device provisioning, multi-purpose services, or reviewed first-party access that is integral to an optional health application's declared purpose |
-| Red | Tracking, third-party advertising attribution, behavior/session analytics, audience identity, unrelated collection of location/motion/health data, a locally confirmed denied-permission use, or a reviewed device-integrity check | Reviewed vendor documentation, explicit analytics/advertising role, App Privacy Report context, local permission violation, containment evidence, or development-environment indicators tied to an endpoint |
-
-Every entry also has an analysis stage. `preliminary` is an immediate machine classification and remains visibly labeled as preliminary. `studied` means that the engine has reviewed an exact catalog record, local permission evidence, or bounded public DNS/HTTPS metadata. Confidence remains explicit because a hostname and public root response still cannot reveal an encrypted API path or request body.
-
-Application purpose is contextual evidence, not a blanket exception. A reviewed optional health or fitness app can make expected first-party health access orange at most, because that access is intrinsic to the app's user-selected purpose. The same app's third-party advertising, attribution, or behavioral analytics domains are still evaluated independently and can remain red. Government, medical-record, appointment, or other sensitive services are not automatically treated as optional health readers.
-
-The bundled catalogue contains only neutral reserved examples. Organization-specific mappings belong in local configuration and must remain separate from distributable source while the generic classification engine retains its three-color contract.
-
-## User interface
-
-The dashboard is a single English LTR page with local JavaScript state and loopback API calls.
-
-| Area | Main controls | Behavior |
-|---|---|---|
-| Header | **Check Developer Mode**, permission center, detected applications, report import | Opens local dialogs or reads a local file; no remote upload is performed |
-| Summary cards | Rows, monitored apps, domains, blocked rules | Shows the current report, local inventory, and DNS service status |
-| DNS engine strip | UDP/TCP receipt, healthy DoH providers, client-attribution state, self-test, and **V3 Study** | Reports measured state compactly and queues bounded study for preliminary entries |
-| Activity table | Application filter, risk filter, V3 study, and sorting by latest time, application, hostname, or classification | Displays every matching live DNS event, imported report row, and permanent V3 hostname except items currently shown in operations; each application name includes its attribution source, and DNS-only rows are labeled as unattributed |
-| Protection operations | Manual hostname transfer, filter, sorting by latest observation, latest block, name, or classification, allow/monitor/block controls, removal from the workspace, and blocklist export | Starts empty, displays only hostnames the user transfers from activity, shows latest observation and block timing plus counts, and creates no policy until the user explicitly selects an action |
-| Permission center | Desired permission choices, system protection, manual action recommendations, capture controls, and incident export | Saves choices, starts paired-iPhone evidence capture, analyzes results, and exports incident JSON without automatic containment |
-
-The two main dashboard panels do not use previous/next pagination or nested vertical scrolling. All matching activity rows that are not currently transferred and all privacy-protection operations are rendered in full, and the browser page provides the single vertical scrollbar for reviewing them from top to bottom.
-
-## Check Developer Mode
-
-The **Check Developer Mode** button is located in the dashboard header. It opens a dedicated dialog and asks the local backend to read the real Developer Mode state from the paired iPhone through `/api/developer-mode/status`.
-
-| Result | Meaning shown to the user |
-|---|---|
-| Developer Mode is off | The dialog confirms that Developer Mode is not active and is therefore not exposed to applications as an enabled device state |
-| Developer Mode is on | The dialog explains that it remains visible to applications and directs the user to turn it off in iPhone Settings, then use **Check now** to verify again |
-| Device is unavailable | The dialog explains that the iPhone, pairing record, connector, or local-network discovery could not be reached and offers another check |
-
-The button is deliberately read-only. It does not spoof the device state, conceal an enabled Developer Mode, bypass an application's security checks, or turn Developer Mode off remotely. The actual change must be made on the iPhone; Privacy Protector only verifies the resulting state and reports it honestly.
+</details>
 
 ## Report format
+
+<details>
+<summary>Show the accepted report fields</summary>
 
 The browser accepts newline-delimited JSON. Each line is parsed independently. Malformed lines are counted and ignored. Only rows whose `type` is `networkActivity` are shown as report activity.
 
@@ -194,7 +284,12 @@ The fields used by the interface are shown below. Extra fields remain in browser
 | `context` | Optional display context |
 | `appName`, `displayName`, `applicationName` | Optional names used when discovering an application |
 
+</details>
+
 ## Local API
+
+<details>
+<summary>Show all local API endpoints</summary>
 
 The dashboard API is served by `DashboardHandler` in `app.py`. Read endpoints return JSON with `Cache-Control: no-store`. State-changing requests are rejected unless their `Host` header is loopback.
 
@@ -228,7 +323,12 @@ The dashboard API is served by `DashboardHandler` in `app.py`. Read endpoints re
 
 Request bodies are JSON objects. The general maximum request body is `128 KiB`. Log reads are limited to `2,000` events per request, and incremental polling uses an event cursor.
 
+</details>
+
 ## Network behavior
+
+<details>
+<summary>Show network defaults and upstream behavior</summary>
 
 | Setting | Default | Notes |
 |---|---|---|
@@ -252,6 +352,8 @@ The primary and fallback services are public recursive resolvers. The selected r
 
 V3 public metadata study is a separate connection from DNS forwarding. For a preliminary host, the computer may connect directly to that host on HTTPS port `443`; the destination therefore sees the computer’s public source address and the V3 study user agent. The request contains only `GET /`, no cookie, authorization header, account path, referrer, device identifier, imported report, activity history, or captured iPhone data. Redirects are recorded by hostname but are not followed. Private, loopback, link-local, and reserved targets are rejected before connection, certificate validation remains enabled, response bytes are capped, and only selected public metadata is stored.
 
+</details>
+
 ## Security boundaries and response headers
 
 The backend serves the interface and API locally, but the DNS listener is intentionally available on the configured interface. Windows Firewall preparation restricts inbound DNS rules to the Private profile, the local subnet, the selected Python executable, and port `53` over UDP and TCP.
@@ -261,6 +363,9 @@ The web response adds a Content Security Policy that permits only same-origin sc
 The loopback `Host` check protects state-changing API calls from normal non-local access, but it is not an authentication system. The application should not be reverse-proxied or exposed to the internet without a separate security design.
 
 ## Storage layout
+
+<details>
+<summary>Show every stored path and its privacy classification</summary>
 
 | Path | Contents | Persistence | Privacy classification |
 |---|---|---|---|
@@ -281,7 +386,12 @@ The loopback `Host` check protects state-changing API calls from normal non-loca
 
 The application writes JSON atomically by creating a temporary file and replacing the prior file. The DNS activity log is append-only until it is cleared or rotated. DNS answer cache entries and provider health are memory-only and disappear when the backend stops.
 
+</details>
+
 ## Source tree
+
+<details>
+<summary>Show the responsibility of every file</summary>
 
 | Path | Responsibility |
 |---|---|
@@ -309,7 +419,12 @@ The application writes JSON atomically by creating a temporary file and replacin
 | `Privacy Protector.cmd` | Desktop-shortcut entry point |
 | `create-shortcut.ps1` | Creates the English-named desktop shortcut with the project icon |
 
+</details>
+
 ## Runtime requirements
+
+<details>
+<summary>Show the full requirements table</summary>
 
 | Requirement | Needed for |
 |---|---|
@@ -323,6 +438,8 @@ The application writes JSON atomically by creating a temporary file and replacin
 | Administrator approval | First-time or repaired iPhone-mode preparation, including scoped firewall rules and port-`53` ownership coordination; not required when the service and rules are already healthy |
 
 The core dashboard and DNS server use the Python standard library. Paired-iPhone features use the pinned `pymobiledevice3` version in `requirements.txt`; install it into a local virtual environment instead of copying another machine's `.venv` directory.
+
+</details>
 
 ## Local test launch
 
@@ -390,6 +507,9 @@ To remove only the sign-in shortcut, run:
 
 ## Direct command-line options
 
+<details>
+<summary>Show all command-line options</summary>
+
 The backend can be started directly:
 
 ```powershell
@@ -409,7 +529,12 @@ python .\app.py --dns-host 0.0.0.0 --dns-port 53053 --web-host 127.0.0.1 --web-p
 | `--cache-size` | `2048` | Maximum memory-resident DNS answers |
 | `--iphone-client-ip` | Empty | Optional exact local-network address used to label iPhone client attribution as confirmed; without it, a non-loopback client remains only possible |
 
+</details>
+
 ## Daily-use workflow
+
+<details>
+<summary>Show the action-by-action workflow table</summary>
 
 | Action | Expected result |
 |---|---|
@@ -431,7 +556,12 @@ python .\app.py --dns-host 0.0.0.0 --dns-port 53053 --web-host 127.0.0.1 --web-p
 | Export rules | A text file containing exact blocked hostnames is downloaded |
 | Export incidents | A JSON file containing the selected or complete incident view is downloaded |
 
+</details>
+
 ## Meaning of the existing delete and export controls
+
+<details>
+<summary>Show exactly what each control deletes</summary>
 
 | Control | Actual scope | Data that remains |
 |---|---|---|
@@ -442,37 +572,12 @@ python .\app.py --dns-host 0.0.0.0 --dns-port 53053 --web-host 127.0.0.1 --web-p
 | **Export rules** | Downloads only currently blocked exact hostnames | It does not create a clean application copy |
 | **Export incident log** | Downloads saved incident data | The exported file is itself sensitive and should remain private |
 
-## Tests
-
-Run the current suite with the project virtual environment:
-
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-```
-
-The suite covers case, terminal-dot, IDNA, invalid-name, and common record-type parsing; EDNS and DNSSEC request preservation; NXDOMAIN generation; exact-only policy behavior; positive and negative TTL caching; transaction-ID and remaining-TTL rewriting; malformed requests; UDP and TCP integration on one port; deterministic local mock DoH forwarding; primary failure, fallback, primary recovery, timeout, and truncated-response retry; concurrent response-ID isolation; enriched logging, per-hostname observation/block timing summaries, corrupt-line isolation, and bounded rotation; Apple packet-frame DNS extraction; process-to-app resolution; persistent application/domain attribution and deduplication; one-write domain-classification bootstrap; purpose-aware first-party health context with independent third-party risk; Developer Mode read-only behavior; privacy evidence and containment; domain-only operations transfer, duplicate suppression, sorting, continuous-list rendering; background DNS mode with no extra iPhone observer; and documentation privacy safeguards. Public-internet availability is not required for deterministic test correctness.
-
-## Known limitations
-
-| Limitation | Consequence |
-|---|---|
-| DNS sees hostnames, not encrypted application payloads | The tool cannot determine what data was sent inside HTTPS |
-| General DNS requests lack process identity | Exact names require USB `pcapd` process metadata or Apple report evidence; without either, the row remains visibly labeled `DNS only` rather than receiving a guessed application name |
-| Encrypted DNS and direct encrypted connections hide the DNS question | Apple packet metadata may still expose a process name, but Privacy Protector does not decrypt DoH, DoT, HTTPS, or application payloads and cannot create a hostname attribution from ciphertext |
-| DNS cannot measure internal application functions | The application does not maintain a function inventory or infer an internal call from a hostname; user-initiated log analysis is limited to observable evidence indicators and an absence of evidence is not proof of absence |
-| Exact matching has no wildcard coverage | New subdomains require separate rules |
-| DNS coverage is path-dependent | Cellular bypass, in-app encrypted DNS, direct IP use, answers cached before observation, VPN or alternate DNS profiles, and Wi-Fi interruptions can be invisible |
-| A possible network client is not confirmed as the iPhone | Configure the exact iPhone address explicitly or use separate system evidence before claiming attribution |
-| DNSSEC is not validated locally | EDNS and DNSSEC wire data are preserved, but validation behavior belongs to the selected upstream resolver |
-| Public DoH providers receive resolution traffic | The active provider receives the DNS wire query and public source address; provider privacy policies and availability remain external dependencies |
-| iOS permissions cannot be changed by this desktop program | The interface provides the correct Settings guidance and verifies later evidence |
-| Developer Mode is read-only | The user must turn it off directly on the iPhone |
-| Paired-device features depend on Apple pairing and local discovery | A locked, disconnected, untrusted, or unreachable phone produces an unavailable state |
-| Specialized endpoint mappings are intentionally absent | Add reviewed organization-specific mappings only through local configuration kept outside distributable source |
-| Runtime data is private local state | It is stored under `%LOCALAPPDATA%\PrivacyProtector\data` and should be backed up separately from the source tree |
-| Paired-device dependencies are substantial | Install the pinned requirement in a virtual environment; the DNS and dashboard core remains standard-library based |
+</details>
 
 ## Troubleshooting
+
+<details>
+<summary>Show the full symptom / cause / response table</summary>
 
 | Symptom | Likely cause | Response |
 |---|---|---|
@@ -491,10 +596,34 @@ The suite covers case, terminal-dot, IDNA, invalid-name, and common record-type 
 | Cleared activity still shows domains | Stored profile and report coverage are intentionally retained | Remove the related profile and saved state separately; Clear activity resets only the activity log |
 | A transferred item is missing from activity | It is currently visible in the operations tray, where duplicates are intentionally suppressed | Review it in operations or use **Remove from operations** to make it eligible for the activity view again; this does not alter policy |
 
+</details>
+
 ## Data recovery and backup
 
 Before changing policy or deleting profiles, stop the backend and make a private backup of `%LOCALAPPDATA%\PrivacyProtector\data` in a protected location. The backup contains the same sensitive inventory and DNS evidence as the live files.
 
+## Tests
+
+Run the current suite with the project virtual environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+The suite covers case, terminal-dot, IDNA, invalid-name, and common record-type parsing; EDNS and DNSSEC request preservation; NXDOMAIN generation; exact-only policy behavior; positive and negative TTL caching; transaction-ID and remaining-TTL rewriting; malformed requests; UDP and TCP integration on one port; deterministic local mock DoH forwarding; primary failure, fallback, primary recovery, timeout, and truncated-response retry; concurrent response-ID isolation; enriched logging, per-hostname observation/block timing summaries, corrupt-line isolation, and bounded rotation; Apple packet-frame DNS extraction; process-to-app resolution; persistent application/domain attribution and deduplication; one-write domain-classification bootstrap; purpose-aware first-party health context with independent third-party risk; Developer Mode read-only behavior; privacy evidence and containment; domain-only operations transfer, duplicate suppression, sorting, continuous-list rendering; background DNS mode with no extra iPhone observer; and documentation privacy safeguards. Public-internet availability is not required for deterministic test correctness.
+
+---
+
+## About
+
+Privacy Protector is an independent individual project, designed and implemented with an
+emphasis on transparent evidence, local control, reversible decisions, and clearly stated
+technical limits.
+
+Security reports: see `SECURITY.md` — report privately, never in a public issue.
+Release history: see `CHANGELOG.md`.
+
 ## License
 
-This project is licensed under the MIT License. See `LICENSE` for details.
+This project is licensed under the GNU Affero General Public License v3.0.
+See `LICENSE` for the full text.

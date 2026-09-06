@@ -7,6 +7,7 @@ README_PATH = PROJECT_ROOT / 'README.md'
 APPS_PATH = PROJECT_ROOT / 'data' / 'apps.json'
 POLICY_PATH = PROJECT_ROOT / 'data' / 'policy.json'
 CONTROLS_PATH = PROJECT_ROOT / 'data' / 'privacy-controls.json'
+PUBLIC_SOURCE_URL = 'https://github.com/ibnkabed/privacy-protector'
 FORBIDDEN_IDENTIFIER_PATTERNS = {'Windows user profile path': '(?i)\\b[A-Z]:\\\\Users\\\\[^\\\\\\s`]+', 'email address': '(?i)\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b', 'Saudi mobile number': '(?<!\\d)(?:\\+?966|0)?5\\d{8}(?!\\d)', 'private IPv4 address': '(?<!\\d)(?:10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3})(?!\\d)'}
 
 class PublicReadmePrivacyTests(unittest.TestCase):
@@ -65,12 +66,20 @@ class PublicReadmePrivacyTests(unittest.TestCase):
                     self.assertFalse(value in readme_folded, f'A {category} value appears in the public README')
 
     def test_public_documentation_remains_detailed(self):
-        required_sections = ('## What the application does', '## Architecture', '## User interface', '## Check Developer Mode', '## Local API', '## Storage layout', '## Runtime requirements', '## Tests', '## Known limitations')
+        required_sections = ('## Quick start', '## What the application does', '## Architecture', '## User interface', '## Check Developer Mode', '## Local API', '## Storage layout', '## Runtime requirements', '## Tests', '## Known limitations', '## License')
         for heading in required_sections:
             with self.subTest(heading=heading):
                 self.assertIn(heading, self.readme)
 
-    def test_separate_source_hosting_topic_is_not_mentioned(self):
-        self.assertIsNone(re.search('(?i)\\b(?:git|github|repository)\\b', self.readme))
+    def test_source_hosting_links_stay_on_this_public_project(self):
+        for match in re.finditer(r'(?i)https?://[^\s`)\]<>"\']*github[^\s`)\]<>"\']*', self.readme):
+            with self.subTest(url=match.group(0)):
+                self.assertTrue(match.group(0).startswith(PUBLIC_SOURCE_URL))
+
+    def test_source_hosting_assertion_rejects_a_foreign_repository_url(self):
+        foreign = 'See https://github.com/other-owner/other-project for details.'
+        found = re.findall(r'(?i)https?://[^\s`)\]<>"\']*github[^\s`)\]<>"\']*', foreign)
+        self.assertEqual(len(found), 1)
+        self.assertFalse(found[0].startswith(PUBLIC_SOURCE_URL))
 if __name__ == '__main__':
     unittest.main()
