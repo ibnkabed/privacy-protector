@@ -629,7 +629,7 @@ Release history: see `CHANGELOG.md`.
 
 ## License
 
-Copyright (C) 2026 ibnkabed.
+Copyright (c) 2026 IbnKabed.
 
 This project is licensed under the GNU Affero General Public License v3.0.
 See `LICENSE` for the full text and `NOTICE` for the copyright notice.
