@@ -28,3 +28,6 @@ Desktop.ini
 .DS_Store
 .idea/
 .vscode/
+# ملفات المالك المحلية، لا تخص مستخدمي المشروع العام (2026-11-02)
+/CLAUDE.md
+/NOTES.md
