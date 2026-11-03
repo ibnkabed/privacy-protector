@@ -1,10 +1,12 @@
 name: Release
 
 # Builds PrivacyProtector.exe and its installer from this repository, on GitHub's own runner,
-# whenever a version tag is pushed, and attaches both to the GitHub release.
+# whenever a version tag is pushed, and attaches both to the GitHub release. Pushes to a release
+# branch build the same files as a workflow artifact only, to check the build before tagging.
 on:
   push:
     tags: ["v*"]
+    branches: ["release/**"]
   workflow_dispatch:
 
 permissions:
