@@ -14,3 +14,18 @@ You should have received a copy of the GNU Affero General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>.
 
 The full license text is in the LICENSE file.
+
+Third-party components
+----------------------
+
+The installed program bundles these libraries, each under its own license:
+
+- Python 3.12 (Python Software Foundation License) - https://www.python.org/
+- pystray 0.19.5 (GNU LGPL v3) - https://github.com/moses-palmer/pystray
+- Pillow 10.4.0 (MIT-CMU / HPND) - https://python-pillow.org/
+- pywin32 312 (PSF License) - https://github.com/mhammond/pywin32
+- pymobiledevice3 10.3.0 and its dependencies (GNU GPL v3) - optional paired-iPhone tools - https://github.com/doronz88/pymobiledevice3
+- PyInstaller bootloader (GPL v2 with the bootloader exception) - used to build PrivacyProtector.exe
+
+The installer is built with Inno Setup (Inno Setup License), which is not part of the program.
+

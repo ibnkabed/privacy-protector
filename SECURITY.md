@@ -18,8 +18,9 @@ Use GitHub's private vulnerability reporting:
 Please include:
 
 - What the issue is and which component it affects
-  (`dns_engine.py`, `domain_classifier.py`, `app.py`, a launcher script, or the web UI).
-- Steps to reproduce, ideally against the test launcher on DNS port `53053`.
+  (`dns_engine.py`, `domain_classifier.py`, `pc_protection.py`, `app.py`, a script in `scripts\`, the installer, or the web UI).
+- Steps to reproduce, ideally against `Start-Privacy-Protector.ps1 -TestPort` (DNS port `53053`) with
+  `PRIVACY_PROTECTOR_DATA_DIR` pointing at a scratch folder.
 - The impact you believe it has.
 - Your operating system, Python version, and application version.
 
@@ -38,13 +39,15 @@ published once users can update.
 ## In scope
 
 - Remote reachability of the dashboard or API beyond the intended loopback boundary.
-- Bypassing the loopback `Host` check on state-changing API calls.
+- Bypassing the `Host` check, the `Origin` check or the session token on the dashboard API.
 - DNS cache poisoning, response forgery, or transaction-ID handling flaws.
 - Any path that causes the V3 study to connect to a private, loopback, link-local,
   or reserved address, follow redirects, or retain page bodies, cookies, or credentials.
 - Leakage of local activity, policy, classification, capture, or attribution data to
   any remote party.
-- Privilege issues in the firewall preparation or startup installation scripts.
+- Privilege issues in the elevated scripts under `scripts\`, the installer or the uninstaller, including
+  a switch turned off that leaves a Windows change behind.
+- AI provider keys reaching anything other than the provider they were entered for.
 - Path traversal or arbitrary file access through the local HTTP server.
 
 ## Out of scope

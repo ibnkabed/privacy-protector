@@ -234,7 +234,7 @@ function domHtml(d){
     :[["block","Block"],["monitor","Monitor"],["allow","Allow"]];
   return `<div class="dom ${domState(d)}"><div class="t">${esc(d.domain)}</div>
     <div class="l">${COLOR[d.color]??esc(d.color)}${d.blocked?" · blocked":""}${state?" · "+esc(state):""}${d.hits?" · "+d.hits+" hits":""}</div>
-    ${d.reason?`<div class="l ar" dir="rtl">${esc(d.reason)}</div>`:""}
+    ${d.reason?`<div class="l">${esc(d.reason)}</div>`:""}
     <div class="btns">${acts.map(([a,l])=>`<button data-act="${a}" data-dom="${esc(d.domain)}">${l}</button>`).join("")}</div></div>`;
 }
 const CAP_NAME={microphone:"Microphone",webcam:"Camera",location:"Location",contacts:"Contacts"};
@@ -245,7 +245,7 @@ function capHtml(g){
     :perm.writable&&perm.value!=="Deny"?`<button data-cap="deny" data-key="${esc(g.key)}">Deny</button>`:"";
   return `<div class="dom ${capState(g)}"><div class="t">${esc(CAP_NAME[g.capability]||g.capabilityLabel||g.capability)}</div>
     <div class="l">Verdict: ${esc(v.verdict||"—")} · ${g.uses||0} uses · last ${ago(g.lastAt)}${g.inUse?" · in use now":""} · Windows: ${esc(PERM[perm.value]||"default")}${perm.writable?"":" · can't be set from Windows"}</div>
-    ${v.role?.text?`<div class="l ar" dir="rtl">${esc(v.role.text)}</div>`:""}${v.action?.text?`<div class="l ar" dir="rtl">${esc(v.action.text)}</div>`:""}
+    ${v.role?.text?`<div class="l">${esc(v.role.text)}</div>`:""}${v.action?.text?`<div class="l">${esc(v.action.text)}</div>`:""}
     ${btn?`<div class="btns">${btn}</div>`:""}</div>`;
 }
 const DOM_LIMIT=40, expanded=new Set();
@@ -267,7 +267,7 @@ function drawDetail(){
       <span>Domain state</span><span><b class="st-red">${n("red")}</b> at risk · <b class="st-orange">${n("orange")}</b> attention · <b class="st-green">${n("green")}</b> safe</span>
       ${caps.length?`<span>Device access</span><span>${caps.length} · ${caps.filter(g=>capState(g)!=="green").length} not safe</span>`:""}
     </div>
-    ${p.purpose?`<div class="l ar mut gap6" dir="rtl">${esc(p.purpose)}</div>`:""}
+    ${p.purpose?`<div class="l mut gap6">${esc(p.purpose)}</div>`:""}
     ${caps.length?`<div class="sec"><h3>Device access</h3>${caps.map(capHtml).join("")}</div>`:""}
     ${doms.length?`<div class="sec"><h3>Domains</h3>${(all?doms:doms.slice(0,DOM_LIMIT)).map(domHtml).join("")}
       ${doms.length>DOM_LIMIT?`<div class="btns"><button data-more="${esc(p.key)}">${all?"Show fewer":`Show all ${doms.length}`}</button></div>`:""}</div>`
@@ -291,7 +291,7 @@ function coreHtml(){
       <span>Apps</span><span>${phoneApps.length} detected · ${profiles.length} monitored</span>
       <span>PC review</span><span>${esc(rv.state||"—")} · last ${ago(rv.lastRunAt)}${rv.lastError?" · <b class=\"st-orange\">error</b>":""}</span>
     </div>
-    ${issues.length?`<div class="sec">${issues.map(i=>`<div class="dom ${i.sev}"><div class="t">${esc(i.title)}</div>${i.text?`<div class="l ar" dir="rtl">${esc(i.text)}</div>`:""}</div>`).join("")}</div>`
+    ${issues.length?`<div class="sec">${issues.map(i=>`<div class="dom ${i.sev}"><div class="t">${esc(i.title)}</div>${i.text?`<div class="l">${esc(i.text)}</div>`:""}</div>`).join("")}</div>`
       :`<div class="sec mut">Nothing needs you.</div>`}`;
 }
 /* Engine alerts (safety) by code alone and immediately; the rest goes through the judge */
@@ -306,7 +306,7 @@ const chosen=key=>typeof choice==="function"&&choice(key);
 function rawCore(){
   const s=st.status||{}, pc=st.pc||{}, out=[];
   if(st.status&&!s.ok) out.push({sev:"red",safety:true,title:"The DNS engine isn't answering"});
-  if((s.dnsEngine?.providers||[]).length&&!(s.dnsEngine.providers.some(p=>p.state==="healthy"))) out.push({sev:"red",safety:true,title:"No upstream DNS provider is healthy"});
+  if((chosen("phone")||chosen("pc"))&&(s.dnsEngine?.providers||[]).length&&!(s.dnsEngine.providers.some(p=>p.state==="healthy"))) out.push({sev:"red",safety:true,title:"No upstream DNS provider is healthy"});
   if(chosen("pc")&&st.pc&&pc.routing&&!pc.routing.routed) out.push({sev:"red",safety:true,title:"The PC bypasses the engine",text:"The PC's connections don't go through the engine, so nothing is watched or blocked. Turn PC protection on in Settings."});
   const rem=s.connectionReminder||{};
   if(chosen("phone")&&(rem.state==="lost"||rem.state==="disconnected")) out.push({sev:"orange",title:`The phone isn't connected${rem.silentForSeconds?" for "+Math.round(rem.silentForSeconds/60)+"m":""}: reconnect it to the modem (DNS ${rem.dnsAddress||"—"})`});
@@ -335,14 +335,14 @@ function drawReview(){
       <span>Cycles</span><span>${r.cycles??"—"}</span>
       <span>PC domains</span><span><b class="st-red">${c["color:red"]??0}</b> red · <b class="st-orange">${c["color:orange"]??0}</b> orange · <b class="st-green">${c["color:green"]??0}</b> green</span>
       <span>Decisions</span><span>${c["auto-blocked"]??0} auto-blocked · ${c.protected??0} protected · ${c["guard-released"]??0} released</span></div>
-    ${r.lastError?`<div class="dom red"><div class="l ar" dir="rtl">${esc(r.lastError)}</div></div>`:""}
+    ${r.lastError?`<div class="dom red"><div class="l">${esc(r.lastError)}</div></div>`:""}
     <div class="btns"><button id="review-now">Review PC now</button></div>${aiHtml()}`);
 }
 function drawLedger(d){
   if(!d){show(`<h2>Model work log</h2><div class="empty">…</div>`);return}
   const s=d.summary||{};
   const rows=(d.rows||[]).map(r=>{const[m,w]=MARK[r.column]||["?",r.column];
-    return `<tr title="${esc(r.item)}"><td class="m m-${r.column}" title="${w}">${r.carried?"⟲":""}${m}</td><td>${esc(t5(r.at))}</td><td>${esc(r.task||"")}</td><td class="ar" dir="rtl">${esc(r.item)}</td><td>${esc(r.model||r.provider||"")}</td></tr>`}).join("");
+    return `<tr title="${esc(r.item)}"><td class="m m-${r.column}" title="${w}">${r.carried?"⟲":""}${m}</td><td>${esc(t5(r.at))}</td><td>${esc(r.task||"")}</td><td >${esc(r.item)}</td><td>${esc(r.model||r.provider||"")}</td></tr>`}).join("");
   show(`<h2>Model work log · unresolved</h2><div class="lg-key">Since ${esc(t5(d.since))}: ${s.done||0} ✓ · ${s.wrong||0} wrong · ${s.not_done||0} not done · ${s.missed||0} skipped</div>
     <div class="lg">${rows?`<table><colgroup><col class="w30px"><col class="w84px"><col class="w20p"><col><col class="w22p"></colgroup><thead><tr><th></th><th>Time</th><th>Task</th><th>Item</th><th>Model</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty">Nothing unresolved</div>`}</div>`);
 }
@@ -367,10 +367,10 @@ function drawSecurity(d){
   const df=d.defender||{}, s=df.status||{}, m=d.mail||{}, td=m.today||{}, au=(df.audit||{}).counts||{}, ap=(df.audit||{}).processes||{};
   const yes=v=>v?`<b class="st-green">on</b>`:`<b class="st-red">off</b>`;
   const top=o=>Object.entries(o||{}).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n,c])=>`${esc(n)} ${c}`).join(" · ")||"—";
-  const issues=(df.issues||[]).map(i=>`<div class="dom ${i.level==="red"?"red":"orange"}"><div class="t">${esc(i.title)}</div><div class="l ar" dir="rtl">${esc(i.text||"")}</div>${i.command?`<div class="l mut">${esc(i.command)}</div>`:""}</div>`).join("");
+  const issues=(df.issues||[]).map(i=>`<div class="dom ${i.level==="red"?"red":"orange"}"><div class="t">${esc(i.title)}</div><div class="l">${esc(i.text||"")}</div>${i.command?`<div class="l mut">${esc(i.command)}</div>`:""}</div>`).join("");
   const threats=(df.threats||[]).slice(0,8).map(t=>`<div class="dom ${t.actionOk?"":"red"}"><div class="t">${esc(t.name||t.threatId)}</div><div class="l mut">${esc(t5(t.at))} · ${t.actionOk?"handled":"not handled"} · ${esc((t.resources||[])[0]||"")}</div></div>`).join("");
   const scans=(df.scans||[]).slice(0,8).map(x=>{const[c,w]=SCAN[x.verdict]||["",x.verdict];return `<div class="dom"><div class="t"><b class="${c}">${w}</b> ${esc(String(x.path).split("\\").pop())}</div><div class="l mut">${esc(t5(x.at))}${x.signature?" · signature "+esc(x.signature)+(x.signer?" ("+esc(x.signer)+")":""):""}</div></div>`}).join("");
-  const mails=(m.recent||[]).slice(0,12).map(x=>{const[c,w]=MAILV[x.verdict]||["",x.verdict];return `<div class="dom"><div class="t"><b class="${c}">${w}${x.verdict==="danger"&&x.removed===false?" — failed":""}</b> ${esc(x.subject||"(no subject)")}</div><div class="l mut">${esc(x.sender)} · ${esc(t5(x.at))}</div>${(x.reasons||[]).length?`<div class="l ar" dir="rtl">${esc(x.reasons.join(", "))}</div>`:""}</div>`}).join("");
+  const mails=(m.recent||[]).slice(0,12).map(x=>{const[c,w]=MAILV[x.verdict]||["",x.verdict];return `<div class="dom"><div class="t"><b class="${c}">${w}${x.verdict==="danger"&&x.removed===false?" — failed":""}</b> ${esc(x.subject||"(no subject)")}</div><div class="l mut">${esc(x.sender)} · ${esc(t5(x.at))}</div>${(x.reasons||[]).length?`<div class="l">${esc(x.reasons.join(", "))}</div>`:""}</div>`}).join("");
   show(`<h2>Defender and Outlook</h2><div class="mut">Windows Defender protects; this app reads its state, asks it to scan new downloads, and checks new Outlook mail. It never changes Defender's settings.</div>
     <div class="rows">
       <span>Defender</span><span>${esc(s.mode||"—")} · real-time ${yes(s.realtime)} · tamper ${yes(s.tamper)}</span>

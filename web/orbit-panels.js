@@ -250,7 +250,7 @@ function drawActivity(){
       ${ops.map(o=>`<div class="dom ${o.risk==="red"?"red":o.risk==="orange"?"orange":"green"}"><div class="t">${esc(o.domain)}</div>
         <div class="l">${RISK_WORD[o.risk]} · ${o.count} seen · ${o.blocked} blocked · last seen ${ago(o.at)}${o.blockedAt?" · last blocked "+ago(o.blockedAt):""}${o.action?"":` · <b class="st-orange">waiting for your decision</b>`}</div>
         ${o.ai?.color?`<div class="l">Review: ${esc(o.ai.color)}${o.ai.confidence?" "+o.ai.confidence+"%":""}${o.ai.color==="red"&&!o.ai.blockSafe?" · not safe to block":""}</div>`:""}
-        ${o.why?`<div class="l ar" dir="rtl">${esc(o.why)}</div>`:""}
+        ${o.why?`<div class="l">${esc(o.why)}</div>`:""}
         <div class="btns">${["allow","monitor","block"].map(x=>`<button class="${o.action===x?"on":""}" data-t="op" data-a="${x}" data-dom="${esc(o.domain)}">${ACTION_WORD[x]}</button>`).join("")}
           <button data-t="op-review" data-dom="${esc(o.domain)}">Smart review</button><button data-t="op-remove" data-dom="${esc(o.domain)}">Remove</button></div></div>`).join("")}
       ${ops.length?"":`<div class="empty">The tray is empty</div>`}
@@ -330,12 +330,12 @@ function aiHtml(){
       <button data-t="v3"${v3.classificationPaused?" disabled":""}>${v3.classificationPaused?"Study paused":"Study again (V3)"}</button></div>
     ${scores.length?`<div class="lg-key gap6">${scores.map(([n,x])=>`<span class="${x.passed?"":"st-risk-red"}" title="${esc(x.model||"")}">${esc(n)} ${Math.round((x.score||0)*100)}%</span>`).join(" · ")}</div>`:""}
     ${tools.risks.length?`<h3>Blocks that may break an app · ${tools.risks.length}</h3>${tools.risks.map(r=>`<div class="dom orange"><div class="t">${esc(r.domain)}</div>
-      <div class="l">blocked now · ${r.hits||0} seen${(r.callers||[]).length?" · "+esc(r.callers.join(", ")):""}</div>${r.reason?`<div class="l ar" dir="rtl">${esc(r.reason)}</div>`:""}
+      <div class="l">blocked now · ${r.hits||0} seen${(r.callers||[]).length?" · "+esc(r.callers.join(", ")):""}</div>${r.reason?`<div class="l">${esc(r.reason)}</div>`:""}
       <div class="btns"><button data-t="risk-open" data-dom="${esc(r.domain)}">Unblock</button><button data-t="risk-keep" data-dom="${esc(r.domain)}">Keep blocked</button></div></div>`).join("")}`:""}
     <h3>Suggested blocks · ${finds.length}</h3><div class="lg-key">Red confirmed by a second provider, and the local guard allows blocking it without breaking the app. Your call.</div>
     ${finds.map(([d,e])=>{const v=e.aiVerdict;return `<div class="dom red"><div class="t">${esc(d)}</div>
       <div class="l">${v.confidence||0}% · ${e.hits||0} seen${v.blockImpact?"":""}${(v.reviewers||[]).filter(Boolean).length?" · "+esc(v.reviewers.filter(Boolean).join(" + ")):""}</div>
-      ${v.reason||v.purpose?`<div class="l ar" dir="rtl">${esc(v.reason||v.purpose)}</div>`:""}${v.blockImpact?`<div class="l ar" dir="rtl">${esc(v.blockImpact)}</div>`:""}
+      ${v.reason||v.purpose?`<div class="l">${esc(v.reason||v.purpose)}</div>`:""}${v.blockImpact?`<div class="l">${esc(v.blockImpact)}</div>`:""}
       <div class="btns"><button data-t="sug" data-a="block" data-dom="${esc(d)}">Block</button><button data-t="sug" data-a="monitor" data-dom="${esc(d)}">Monitor only</button></div></div>`}).join("")||`<div class="empty">Nothing to suggest</div>`}
   </div>`;
 }
