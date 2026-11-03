@@ -15,7 +15,11 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
+    env:
+      # Empty until SignPath approves the project and its keys are saved as repository secrets;
+      # while empty, the signing steps are skipped.
+      SIGNPATH_ORGANIZATION_ID: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +38,34 @@ jobs:
       - name: Build PrivacyProtector.exe
         run: python -m PyInstaller packaging/PrivacyProtector.spec --noconfirm
 
+      # Code signing through SignPath Foundation: runs once the project's SignPath organization id and
+      # API token are saved as repository secrets. The unsigned exe goes to SignPath and comes back signed.
+      - name: Upload the exe for signing
+        id: unsigned
+        if: env.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-exe
+          path: dist/PrivacyProtector/PrivacyProtector.exe
+
+      - name: Sign PrivacyProtector.exe
+        if: env.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: privacy-protector
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: exe
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist/signed
+
+      - name: Use the signed exe
+        if: env.SIGNPATH_ORGANIZATION_ID != ''
+        shell: pwsh
+        run: Copy-Item dist\signed\PrivacyProtector.exe dist\PrivacyProtector\PrivacyProtector.exe -Force
+
       - name: Build the installer
         shell: pwsh
         run: |
@@ -41,6 +73,32 @@ jobs:
           choco install innosetup --no-progress -y | Out-Null
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" packaging\PrivacyProtector.iss
           Compress-Archive -Path dist\PrivacyProtector\* -DestinationPath "dist\PrivacyProtector-$version-portable.zip"
+
+      - name: Upload the installer for signing
+        id: unsigned-setup
+        if: env.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-setup
+          path: dist/PrivacyProtector-Setup-*.exe
+
+      - name: Sign the installer
+        if: env.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: privacy-protector
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.unsigned-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist/signed-setup
+
+      - name: Use the signed installer and write the checksums
+        shell: pwsh
+        run: |
+          if (Test-Path dist\signed-setup) { Copy-Item dist\signed-setup\*.exe dist\ -Force }
           Get-FileHash dist\*.exe, dist\*.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } |
             Set-Content dist\SHA256SUMS.txt
 

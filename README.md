@@ -21,9 +21,9 @@ Everything runs on your computer. There is no account, no cloud service and no t
 ## Quick start
 
 1. Download **`PrivacyProtector-Setup-<version>.exe`** from
-   [Releases](https://github.com/ibnkabed/privacy-protector/releases) and run it.
-   Windows may warn about an unknown publisher until the installer is code-signed (see
-   [Code signing policy](#code-signing-policy)); the SHA-256 checksums are published with every release.
+   [Releases](https://github.com/ibnkabed/privacy-protector/releases) and run it. The installer and
+   `PrivacyProtector.exe` are built on GitHub Actions directly from this repository (see
+   [Code signing policy](#code-signing-policy)); SHA-256 checksums are published with every release.
 2. Privacy Protector opens in your browser at `http://127.0.0.1:8733` and asks **what you want to
    protect**: your phone, this PC, both, or nothing yet.
 3. If you chose the phone: set your phone's Wi-Fi DNS server to this PC's local address (Settings shows
@@ -195,9 +195,8 @@ Add `-RemoveData` to delete the data too.
 
 ## Upgrading from 1.x
 
-Version 2 is a major update. It reads the same data folder, so your rules and apps are kept, and it asks once
-what you want to protect before changing anything. Version 1 is still available on the
-[1.0.0 release page](https://github.com/ibnkabed/privacy-protector/releases/tag/v1.0.0) if you need it.
+Version 1 was a phone-only DNS monitor with a classic dashboard. Version 2 replaces it: it reads the same data
+folder, so your rules and apps are kept, and it asks once what you want to protect before changing anything.
 
 ## Tests
 
@@ -220,8 +219,8 @@ needs no internet, and includes a scanner that blocks personal data from the rep
 ## Code signing policy
 
 Free code signing provided by [SignPath.io](https://signpath.io), certificate by
-[SignPath Foundation](https://signpath.org) — once the project is accepted. Until then the release files are
-built unsigned on GitHub Actions directly from this repository, with SHA-256 checksums.
+[SignPath Foundation](https://signpath.org). Release files are built on GitHub Actions directly from this
+repository's tagged source, and signing runs there too; nothing is built or signed on a personal computer.
 
 - **Committers and reviewers:** IbnKabed, the project owner
 - **Approvers:** IbnKabed, the project owner
