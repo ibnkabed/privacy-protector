@@ -1,6 +1,6 @@
 """Release scanner: stop personal data from reaching the public repository.
 
-Checks every tracked file and the message of every commit not yet on
+Checks every tracked or new (not ignored) file and the message of every commit not yet on
 origin/main against the patterns in `.private-patterns` (a local file kept out
 of Git, one regular expression per line). Without that file only the generic
 checks run: secret-looking keys and absolute user-profile paths.
@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PATTERNS_FILE = ROOT / ".private-patterns"
 GENERIC = [
-    r"[A-Za-z]:\\Users\\(?!<|%|\{|Public\b)[A-Za-z0-9._-]+\\",
+    r"[A-Za-z]:\\Users\\(?!<|%|\{|Public\b|Example\b|Default\b)[A-Za-z0-9._-]+\\",
     r"\bsk-(?:ant-)?[A-Za-z0-9_-]{20,}",
     r"\bAIza[0-9A-Za-z_-]{30,}",
     r"\bghp_[A-Za-z0-9]{30,}",
@@ -48,7 +48,8 @@ def scan() -> tuple[list[str], dict[str, int]]:
     patterns = load_patterns()
     findings: list[str] = []
     arabic: dict[str, int] = {}
-    for name in git("ls-files", "-z").split("\0"):
+    names = git("ls-files", "-z", "--cached", "--others", "--exclude-standard").split("\0")
+    for name in sorted(set(names)):
         path = ROOT / name
         if not name or path.suffix.lower() in SKIP_SUFFIXES or not path.is_file():
             continue
@@ -74,6 +75,7 @@ def scan() -> tuple[list[str], dict[str, int]]:
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     findings, arabic = scan()
     for line in findings:
         print(line)

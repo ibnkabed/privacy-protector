@@ -60,6 +60,8 @@ class CleanReleaseRuntimeTests(unittest.TestCase):
                     "127.0.0.1",
                     "--web-port",
                     str(web_port),
+                    "--attached",
+                    "--no-tray",
                     "--upstream-timeout",
                     "0.2",
                 ],
@@ -94,9 +96,9 @@ class CleanReleaseRuntimeTests(unittest.TestCase):
                 self.assertTrue(status.get("ok"))
                 self.assertTrue(request_json(base + "/api/dns/cache", "DELETE").get("ok"))
 
-                # Dashboard assets must be revalidated, or an updated styles.css
+                # Dashboard assets must be revalidated, or an updated orbit.css
                 # keeps loading from the browser cache after an upgrade.
-                with urllib.request.urlopen(base + "/styles.css", timeout=5) as asset:
+                with urllib.request.urlopen(base + "/orbit.css", timeout=5) as asset:
                     self.assertEqual(asset.headers.get("Cache-Control"), "no-cache")
                 with urllib.request.urlopen(base + "/api/health", timeout=5) as health:
                     self.assertEqual(health.headers.get("Cache-Control"), "no-store")

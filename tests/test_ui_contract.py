@@ -4,102 +4,92 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-HTML_PATH = PROJECT_ROOT / "web" / "Privacy Protector.html"
-SCRIPT_PATH = PROJECT_ROOT / "web" / "app.js"
-STYLES_PATH = PROJECT_ROOT / "web" / "styles.css"
-ARABIC = re.compile(r"[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]")
+WEB = PROJECT_ROOT / "web"
+HTML_PATH = WEB / "orbit.html"
+SCRIPT_PATH = WEB / "orbit.js"
+PANELS_PATH = WEB / "orbit-panels.js"
+STYLES_PATH = WEB / "orbit.css"
+NOTIFICATION_PATH = PROJECT_ROOT / "Show-Privacy-Protector-Notification.ps1"
+ORIGINAL_LOGO_PATH = PROJECT_ROOT / "web" / "assets" / "Privacy Protector.png"
+RED_NOTIFICATION_LOGO_PATH = (
+    PROJECT_ROOT / "web" / "assets" / "Privacy Protector notification red.png"
+)
+GREEN_NOTIFICATION_LOGO_PATH = (
+    PROJECT_ROOT / "web" / "assets" / "Privacy Protector notification green.png"
+)
 
 
-class ContinuousDashboardListsTests(unittest.TestCase):
+class OrbitDashboardTests(unittest.TestCase):
+    """The 'Moonlit night' dashboard only; the classic one was removed and its
+    tools migrated here."""
+
     @classmethod
     def setUpClass(cls):
         cls.html = HTML_PATH.read_text(encoding="utf-8")
         cls.script = SCRIPT_PATH.read_text(encoding="utf-8")
+        cls.panels = PANELS_PATH.read_text(encoding="utf-8")
         cls.styles = STYLES_PATH.read_text(encoding="utf-8")
+        cls.notification = NOTIFICATION_PATH.read_text(encoding="utf-8")
 
-    def test_interface_is_english_ltr(self):
-        self.assertIn('<html lang="en" dir="ltr">', self.html)
-        self.assertNotRegex(self.html + self.script + self.styles, ARABIC)
-        for term in (
-            "Application Activity & Connections",
-            "Privacy Protection Actions",
-            "Permission Center",
-            "Check Developer Mode",
-            "Latest observation",
-            "Latest block",
-        ):
-            self.assertIn(term, self.html + self.script)
+    def test_classic_dashboard_is_gone(self):
+        for name in ("Privacy Protector.html", "app.js", "pc.js", "styles.css"):
+            self.assertFalse((WEB / name).exists(), name)
+        server = (PROJECT_ROOT / "app.py").read_text(encoding="utf-8")
+        self.assertIn('self.path = "/orbit.html"', server)
+        self.assertNotIn("Privacy%20Protector.html", server)
+        self.assertNotIn('id="classic"', self.html)
 
-    def test_activity_and_policy_pagination_controls_are_absent(self):
-        for control_id in ("prevPage", "nextPage", "pageLabel", "prevPolicy", "nextPolicy", "policyPageLabel"):
-            self.assertNotIn(f'id="{control_id}"', self.html)
-        for state_key in ("pageSize", "policyPage", "policyPageSize"):
-            self.assertNotIn(state_key, self.script)
+    def test_page_obeys_same_origin_content_policy(self):
+        # Content policy 'self': no inline code or styles in the page or in what
+        # the code generates
+        self.assertNotIn("<script>", self.html)
+        self.assertNotIn("<style>", self.html)
+        for source in (self.html, self.script, self.panels):
+            self.assertNotIn('style="', source)
 
-    def test_all_matching_items_render_in_continuous_page_flow(self):
-        self.assertIn("for (const item of state.filteredRows)", self.script)
-        self.assertIn("for (const entry of entries)", self.script)
-        self.assertRegex(self.styles, re.compile(r"body\s*\{[^}]*overflow-y\s*:\s*auto", re.DOTALL))
-        for selector in ("table-wrap", "policy-list"):
-            self.assertNotRegex(self.styles, re.compile(rf"\.{selector}\s*\{{[^}}]*overflow-y\s*:\s*(?:auto|scroll)", re.DOTALL))
+    def test_every_moved_tool_has_a_place(self):
+        for button in ("open-settings", "open-activity", "open-perms", "review",
+                       "open-ledger", "open-paid", "open-models", "dev-pc", "dev-phone"):
+            self.assertIn(f'id="{button}"', self.html)
+        for endpoint in ("/api/dns/self-test", "/api/pc/setup", "/api/pc/capability-history/setup",
+                         "/api/device/apps/scan", "/api/developer-mode/status", "/api/apps/discovered",
+                         "/api/logs", "/api/policy", "/api/privacy-controls", "/api/privacy-capture/start",
+                         "/api/privacy-capture/stop", "/api/ai/review", "/api/ai/stop", "/api/ai/calibrate",
+                         "/api/ai/block-risks", "/api/classifications/analyze"):
+            self.assertIn(endpoint, self.panels, endpoint)
 
-    def test_operations_workspace_is_manual_and_policy_independent(self):
-        for control_id in ("operationFilter", "operationSort", "clearOperationsView"):
-            self.assertIn(f'id="{control_id}"', self.html)
-        self.assertIn("function clearOperationsView()", self.script)
-        self.assertIn("function removeOperationFromTray(domain)", self.script)
-        self.assertIn('const operationTrayStorageKey = "privacy-protector-operation-tray-v2"', self.script)
-        self.assertIn('action: ""', self.script)
-        self.assertIn("addOperationToTray(key)", self.script)
-
-    def test_activity_controls_manual_transfer_and_sorting(self):
-        self.assertIn('id="rowSort"', self.html)
-        for value in ("time", "application", "domain", "classification"):
-            self.assertIn(f'<option value="{value}"', self.html)
-        self.assertIn('rowSort: "time"', self.script)
-        self.assertIn("function sortActivityRows()", self.script)
-        self.assertIn("!operationIsVisible(operationKeyForRow(row))", self.script)
-
-    def test_activity_exposes_attribution_provenance(self):
-        self.assertIn("function applicationNameForRow(row)", self.script)
-        self.assertIn("applicationIdentityForRow(item)", self.script)
-        self.assertIn("Exact attribution from iOS process metadata over USB", self.script)
-        self.assertIn("Confirmed attribution from an Apple App Privacy Report", self.script)
-        self.assertIn("Unattributed - DNS only", self.script)
-        self.assertIn("rowLastObservedAt(item)", self.script)
+    def test_operations_tray_keeps_its_storage_and_stays_manual(self):
+        self.assertIn('"privacy-protector-operation-tray-v3"', self.panels)
+        self.assertIn("no rule made", self.panels)
+        self.assertIn('armed(b,"Confirm block")', self.panels)
 
     def test_report_import_is_batched_below_server_request_limit(self):
-        self.assertIn("REPORT_IMPORT_REQUEST_LIMIT = 96 * 1024", self.script)
-        self.assertIn("new TextEncoder()", self.script)
-        self.assertIn("buildDiscoveredBatches", self.script)
-        self.assertIn("for (const batch of batches)", self.script)
+        self.assertIn("IMPORT_LIMIT=96*1024", self.panels)
+        self.assertIn("CHUNK=100", self.panels)
 
-    def test_shared_domain_renders_once_with_expandable_app_names(self):
-        self.assertIn("function groupReportRowsByDomain(rows)", self.script)
-        self.assertIn("shared.className = \"shared-applications\"", self.script)
-        self.assertIn('toggle.setAttribute("aria-expanded"', self.script)
-        self.assertIn("expandedSharedDomains: new Set()", self.script)
-        self.assertIn("for (const name of identity.names)", self.script)
+    def test_dns_connection_reminder_reaches_the_core(self):
+        self.assertIn("rem.dnsAddress", self.script)
+        self.assertIn('rem.state==="lost"||rem.state==="disconnected"', self.script)
 
-    def test_v3_uses_permanent_green_orange_red_classifications(self):
-        self.assertIn('id="analyzeDomains"', self.html)
-        for risk in ("green", "orange", "red"):
-            self.assertIn(f'<option value="{risk}">', self.html)
-            self.assertIn(f".tag.risk-{risk}", self.styles)
-            self.assertIn(f".policy-classification.risk-{risk}", self.styles)
-        self.assertIn("state.classifications.domains", self.script)
+    def test_every_program_and_app_is_a_planet(self):
+        # All programs and apps appear without limit, and their color reflects
+        # their state, not decisions
+        self.assertNotIn("MAX_PLANETS", self.script)
+        self.assertIn("pcPrograms.forEach", self.script)
+        self.assertIn("capGroups.forEach", self.script)
+        self.assertIn("return phoneApps.map(", self.script)
+        self.assertIn('if(d.blocked)return "green";', self.script)
 
-    def test_private_catalog_and_function_inventory_are_absent(self):
-        self.assertIn("const knownAppNames = {};", self.script)
-        self.assertNotIn("domainPrivacyCatalog", self.script)
-        self.assertNotIn("functionObservation", self.script)
-        self.assertNotIn("watch_ios_function_events", self.script)
-
-    def test_system_protection_uses_generic_evidence_schema(self):
-        self.assertIn("result.systemProtection", self.script)
-        self.assertNotIn("result.groupIB", self.script)
-        self.assertIn("Manual enforcement decision", self.html)
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_dns_notifications_are_minimal_and_use_state_specific_logos(self):
+        self.assertTrue(ORIGINAL_LOGO_PATH.is_file())
+        self.assertTrue(RED_NOTIFICATION_LOGO_PATH.is_file())
+        self.assertTrue(GREEN_NOTIFICATION_LOGO_PATH.is_file())
+        self.assertIn('Privacy Protector notification red.png', self.notification)
+        self.assertIn('Privacy Protector notification green.png', self.notification)
+        self.assertIn('"Your phone is not connected"', self.notification)
+        self.assertIn('"DNS: $DnsAddress"', self.notification)
+        self.assertIn('"Your phone is connected"', self.notification)
+        self.assertNotIn('-Attribution', self.notification)
+        self.assertNotIn('Configure DNS', self.notification)
+        self.assertNotIn('An alert will be sent', self.notification)
+        self.assertNotIn('Monitors domains', self.notification)

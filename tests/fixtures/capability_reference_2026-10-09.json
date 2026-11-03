@@ -1,0 +1,31 @@
+{
+  "source": "CAPABILITY_PRIVACY_STUDY_2026-10-09.md: السجلات الـ26 وتوصياتها بعد مراجعة أدلتها. «مراقبة» في الدراسة يقابلها هنا monitor أو undetermined، ولا يقابلها سماح.",
+  "cases": [
+    {"n": 1, "capability": "microphone", "identity": {"package": "Claude_pzs8sxrjxfjjc", "name": "Claude"}, "study": "allow"},
+    {"n": 2, "capability": "location", "identity": {"path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", "name": "msedge.exe"}, "study": "allow"},
+    {"n": 3, "capability": "location", "identity": {"path": "C:\\Windows\\System32\\netsh.exe", "name": "netsh.exe"}, "study": "allow"},
+    {"n": 4, "capability": "location", "identity": {"path": "C:\\Program Files\\Norton\\Suite\\NortonUI.exe", "name": "NortonUI.exe"}, "study": "monitor"},
+    {"n": 5, "capability": "location", "identity": {"path": "C:\\Program Files (x86)\\Tenorshare iAnyGo\\QtWebEngineProcess.exe", "name": "QtWebEngineProcess.exe"}, "study": "monitor"},
+    {"n": 6, "capability": "microphone", "identity": {"path": "C:\\Users\\Example\\AppData\\Local\\Programs\\Python\\Python312\\pythonw.exe", "name": "pythonw.exe"}, "study": "monitor"},
+    {"n": 7, "capability": "location", "identity": {"package": "windows.immersivecontrolpanel_cw5n1h2txyewy", "name": "windows.immersivecontrolpanel"}, "study": "monitor"},
+    {"n": 8, "capability": "location", "identity": {"path": "C:\\Windows\\System32\\dllhost.exe", "name": "dllhost.exe"}, "study": "monitor"},
+    {"n": 9, "capability": "location", "identity": {"path": "C:\\Program Files\\Plex\\Plex\\QtWebEngineProcess.exe", "name": "QtWebEngineProcess.exe"}, "study": "deny"},
+    {"n": 10, "capability": "microphone", "identity": {"path": "C:\\Users\\Example\\AppData\\Local\\Programs\\Python\\Python312\\python.exe", "name": "python.exe"}, "study": "monitor"},
+    {"n": 11, "capability": "microphone", "identity": {"path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "name": "chrome.exe"}, "study": "allow"},
+    {"n": 12, "capability": "microphone", "identity": {"package": "windows.immersivecontrolpanel_cw5n1h2txyewy", "name": "windows.immersivecontrolpanel"}, "study": "allow"},
+    {"n": 13, "capability": "microphone", "identity": {"package": "Microsoft.ScreenSketch_8wekyb3d8bbwe", "name": "Microsoft.ScreenSketch"}, "study": "allow"},
+    {"n": 14, "capability": "microphone", "identity": {"path": "C:\\Users\\Example\\AppData\\Local\\Programs\\cursor\\Cursor.exe", "name": "Cursor.exe", "fileState": "missing"}, "study": "allow"},
+    {"n": 15, "capability": "location", "identity": {"path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "name": "chrome.exe"}, "study": "allow"},
+    {"n": 16, "capability": "location", "identity": {"path": "C:\\Program Files (x86)\\AnyGo\\AnyGoW.exe", "name": "AnyGoW.exe"}, "study": "monitor"},
+    {"n": 17, "capability": "location", "identity": {"path": "C:\\Program Files (x86)\\MocPOGO\\MocPOGOW.exe", "name": "MocPOGOW.exe", "fileState": "missing"}, "study": "monitor"},
+    {"n": 18, "capability": "contacts", "identity": {"package": "Microsoft.Windows.ShellExperienceHost_cw5n1h2txyewy", "name": "Microsoft.Windows.ShellExperienceHost"}, "study": "monitor"},
+    {"n": 19, "capability": "microphone", "identity": {"path": "C:\\Program Files\\cursor\\Cursor.exe", "name": "Cursor.exe", "fileState": "missing"}, "study": "allow"},
+    {"n": 20, "capability": "microphone", "identity": {"path": "C:\\Users\\Example\\AppData\\Local\\Programs\\Devin\\Devin.exe", "name": "Devin.exe", "fileState": "missing"}, "study": "allow"},
+    {"n": 21, "capability": "location", "identity": {"path": "C:\\Program Files\\Electronic Arts\\EA Desktop\\13.743.3.6251\\EA Desktop\\EACefSubProcess.exe", "name": "EACefSubProcess.exe"}, "study": "deny"},
+    {"n": 22, "capability": "microphone", "identity": {"path": "C:\\Users\\Example\\Documents\\Codex\\Codex RTL\\CodexRTLPatched\\app\\Codex.exe", "name": "Codex.exe", "fileState": "missing"}, "study": "allow"},
+    {"n": 23, "capability": "location", "identity": {"path": "C:\\Users\\Example\\Documents\\Codex\\2026-07-04\\new-chat-2\\outputs\\ChatGPT-RTL\\app\\ChatGPT.exe", "name": "ChatGPT.exe", "fileState": "missing"}, "study": "deny"},
+    {"n": 24, "capability": "microphone", "identity": {"path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", "name": "msedge.exe"}, "study": "allow"},
+    {"n": 25, "capability": "location", "identity": {"path": "C:\\Program Files\\Electronic Arts\\EA Desktop\\13.735.2.6250\\EA Desktop\\EACefSubProcess.exe", "name": "EACefSubProcess.exe", "fileState": "missing"}, "study": "deny"},
+    {"n": 26, "capability": "microphone", "identity": {"package": "MicrosoftWindows.Client.CBS_cw5n1h2txyewy", "name": "MicrosoftWindows.Client.CBS"}, "study": "allow"}
+  ]
+}
