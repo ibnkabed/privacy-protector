@@ -3,9 +3,11 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import phone_auto  # noqa: E402
 from phone_auto import RETRY_CALLS, SOURCE, PhoneAutoProtection  # noqa: E402
 
 
@@ -55,6 +57,20 @@ class PhoneAutoTests(unittest.TestCase):
         auto = self.make({"sdk.tracker-example.io": red(bundles=["com.example.game"])})
         self.assertEqual(auto.apply_verdicts(), 1)
         self.assertEqual(self.policy.domains["sdk.tracker-example.io"], {"action": "block", "source": SOURCE})
+
+    def test_without_ai_review_the_built_in_catalog_blocks_known_trackers(self):
+        domains = {"doubleclick.net": {"appBundles": ["com.example.game"]},
+                   "unknown-sync.example.io": {"appBundles": ["com.example.game"]}}
+        with mock.patch.object(phone_auto.ai_providers, "enabled", return_value=False):
+            auto = self.make(domains)
+            self.assertEqual(auto.apply_verdicts(), 1)
+        self.assertEqual(self.policy.domains["doubleclick.net"]["action"], "block")
+        self.assertNotIn("unknown-sync.example.io", self.policy.domains)
+
+    def test_with_ai_review_on_the_catalog_alone_does_not_block(self):
+        with mock.patch.object(phone_auto.ai_providers, "enabled", return_value=True):
+            auto = self.make({"doubleclick.net": {"appBundles": ["com.example.game"]}})
+            self.assertEqual(auto.apply_verdicts(), 0)
 
     def test_gates_hold(self):
         auto = self.make({

@@ -1,4 +1,4 @@
-"""Pairing with Windows Defender after Norton was removed.
+"""Working with Windows Defender.
 
 Defender is the engine and the app coordinates it: it reads its state and asks it to scan and update signatures. It never weakens it: it does not change its settings, delete, quarantine, or allow anything. All reading is done without administrator rights:
 - Every 15 minutes: Defender's state, what it detected, the registered protection programs, what Smart App Control blocked from the user's launchers, and the one-week monitoring window's events for ransomware protection, Office rules, and mail.

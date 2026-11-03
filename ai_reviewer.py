@@ -1,13 +1,13 @@
-"""Review service: calibration, then provider consensus, then a local blocking gateway.
+"""Review service: the optional AI review of domains, with the providers you configure.
 
-Three gateways before a model's verdict becomes an approved ruling: a provider must not fail the
-`ai_calibration` exam, and blockable red items must win a vote from different models
-selected by the gateway, and blocking is declared safe only
-if the local engine and user rules agree that the path is non-functional.
+Three gates before a model's verdict becomes an approved ruling: the provider's answers are checked
+against domains with known verdicts (`ai_calibration`), a blockable red must survive the jury and the
+judge, and blocking is declared safe only when the local engine and the protection rules agree that
+the domain is not part of what the app needs.
 
-Measurement imposed the first gateway: on the first real run, one provider marked
-`one.one.one.one` as red, and two marked the Private Relay service—which is protection, not
-a violation—as red as well. Thus, trust is granted by degree, not by the presence of a key.
+Measurement imposed the first gate: on the first real run, one provider marked `one.one.one.one` as
+red, and two marked Apple's Private Relay, which is protection rather than a violation, as red too.
+So trust is earned by results, not granted by having a key.
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from ai_domain_review import (
 )
 from ai_providers import AUTO, ProviderPool
 import paths
+from domain_verdicts import LOCAL_AGREEMENT
 
 TIMING_MAX_AGE_SECONDS = 900.0
 # Old voting task name: kept for earlier log lines.
@@ -119,7 +120,8 @@ DECIDED_BY_SESSION = "Your ruling"
 SESSION_REVIEWER = "Your review"
 # What is automatically blocked on mobile and desktop: a ruling confirmed or overridden by the judge, or a your own ruling,
 # and pre-court agreements in saved rulings.
-BLOCK_AGREEMENTS = frozenset({JUDGE_CONFIRMED, JUDGE_OVERRODE, DECIDED_BY_SESSION, "Agreement", DECIDED_BY_SONNET})
+BLOCK_AGREEMENTS = frozenset({JUDGE_CONFIRMED, JUDGE_OVERRODE, DECIDED_BY_SESSION, "Agreement", DECIDED_BY_SONNET,
+                              LOCAL_AGREEMENT})
 # What the judge has not decided in their consolidated review: stored here and the icon turns red to ask for your review,
 # until the judge rules without note or the User Session handles it. Waiting for the judge itself does not color anything.
 JUDGE_NOTES_PATH = paths.DATA_ROOT / "judge-notes.json"
@@ -366,8 +368,8 @@ class DomainAIReviewer:
             self.data_directory / "review-memory.json",
             probe=lambda: ProviderPool(slots=(DECIDER_SLOT,), allow_paid=True).probe_model((judge_names() or (DECIDER,))[0]),
         )
-        # The gateway provides the writer review, the verdict to the jurors, and the confirmation to the judge;
-        # and `allow_paid` remains for testing a model by name only.
+        # Your providers give the writer's reading, the jury's verdict and the judge's confirmation;
+        # `allow_paid` remains for testing a model by name only.
         self.allow_paid = bool(allow_paid)
         self.lock = threading.Lock()
         self.pool = pool
@@ -389,10 +391,9 @@ class DomainAIReviewer:
 
     # -- Initialization ----------------------------------------------------------
     def ensure_pool(self, refresh: bool = False) -> ProviderPool:
-        """Single `auto` slot: the gateway selects the model with each request.
+        """Single `auto` slot: the provider layer rotates among your writers with each request.
 
-        Testing no longer schedules reviews or blocks models from them: the gateway manages rotation, and a model
-        that fails the completed test is removed by a `bad` ruling at the gateway itself.
+        The model check informs you; it does not remove a provider. Turn one off in Settings instead.
         """
         if refresh:
             ai_calibration.recalibrate(self.data_directory, allow_paid=self.allow_paid)
@@ -418,8 +419,8 @@ class DomainAIReviewer:
             progress = dict(self.progress)
         return {
             "version": AI_REVIEW_VERSION,
-            # The gateway selects the model with each request, so review is available as long as the gateway is up.
-            "available": True,
+            # The provider layer picks a configured provider with each request.
+            "available": ai_providers.enabled(),
             "trusted": [AUTO],
             "slots": [
                 {

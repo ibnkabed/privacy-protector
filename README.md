@@ -68,6 +68,8 @@ resolver within a minute and back when the engine returns.
    hold all three roles. Built-in protection rules always win over the models: health and fitness data
    belongs to you, attendance apps may use location at check-in, infrastructure is never blocked, and doubt
    never blocks.
+   **Without AI review** the built-in catalog decides: documented trackers, ad networks and attribution
+   services are blocked automatically, and anything the catalog doesn't know is watched, not blocked.
 4. **Only red that is safe to block is blocked.** If a program then insists on a blocked domain in a way
    that shows it needs it, the block is lifted automatically.
 

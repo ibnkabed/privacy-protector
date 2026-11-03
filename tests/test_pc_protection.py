@@ -213,6 +213,9 @@ class PCProtectionTests(unittest.TestCase):
 
         original = ai_domain_review.review_batch
         ai_domain_review.review_batch = fake_batch
+        enabled = mock.patch.object(pc_protection.ai_providers, "enabled", return_value=True)
+        enabled.start()
+        self.addCleanup(enabled.stop)
         try:
             self.pc.reviewer = FakeReviewer()
             self.attribute("events.tracker-example.io", 200)
@@ -228,6 +231,18 @@ class PCProtectionTests(unittest.TestCase):
         self.assertEqual(counts["blocked"], 1)
         self.assertEqual(self.policy.action_for("events.tracker-example.io"), "block")
         self.assertEqual(self.policy.action_for("api.anthropic.com"), "monitor")
+
+    def test_without_ai_review_the_built_in_catalog_blocks_known_trackers(self):
+        with mock.patch.object(pc_protection.ai_providers, "enabled", return_value=False):
+            self.pc.reviewer = FakeReviewer()
+            self.attribute("app-measurement.com", 200)
+            self.attribute("calendar-sync.example-unknown.io", 200, "203.0.113.9")
+            counts = self.pc.review_cycle()
+        self.assertEqual(self.policy.action_for("app-measurement.com"), "block")
+        unknown = self.pc.domains["calendar-sync.example-unknown.io"]
+        self.assertEqual(unknown["verdict"]["color"], "orange")
+        self.assertEqual(self.policy.action_for("calendar-sync.example-unknown.io"), "monitor")
+        self.assertGreaterEqual(counts["blocked"], 1)
 
     # -- Post-block guard -----------------------------------------------
     def test_retry_storm_releases_block(self):

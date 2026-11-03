@@ -44,8 +44,10 @@ import mail_images
 import user_exceptions
 import user_rules
 import hidden_window
+import ai_providers
 from domain_verdicts import (
     ai_block_gate,
+    catalog_verdict,
     domain_function_role,
     verdict_for,
 )
@@ -1211,6 +1213,21 @@ class PCProtection:
                 for domain, guard, _ in pending
             ]
 
+        if pending and not ai_providers.enabled():
+            # AI review is off: the built-in catalog decides what it knows, and the rest is watched.
+            for domain, guard, _packet in pending:
+                verdict = catalog_verdict(domain) or {
+                    "color": "orange", "confidence": 0, "reason": "Not in the built-in catalog: watched. "
+                    "Turn on AI review in Settings for a second reading.", "blockSafe": False, "provider": "built-in catalog",
+                }
+                verdict["reviewedAt"] = _now_iso()
+                with self.lock:
+                    self._entry(domain)["verdict"] = verdict
+                    self.dirty = True
+                counts["reviewed"] += 1
+                if self.decide(domain, verdict, guard) == "auto-blocked":
+                    counts["blocked"] += 1
+            pending = []
         if pending and self.reviewer is not None:
             try:
                 pool = self.reviewer.ensure_pool()
