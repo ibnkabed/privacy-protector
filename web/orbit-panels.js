@@ -1,4 +1,4 @@
-/* Control-panel tools that used to live in the classic interface:
+/* Control-panel tools:
    ⚙ Settings: linking, activation, iPhone, and monitored apps.
    Activity: continuous phone activity and the operations box with its decisions.
    Permissions: phone permissions center (location, motion, and tracking).

@@ -1,6 +1,5 @@
-/* "Moonlit night": the guard dashboard concept "Event horizon" with a bluish night and moonlight.
-   The app is a core at the center, and programs and apps are planets orbiting it; each detail is a small window at the location of the click.
-   The old dashboard remains intact behind the Classic button. */
+/* "Moonlit night": a bluish night sky with moonlight.
+   The app is a core at the center, and programs and apps are planets orbiting it; each detail is a small window at the location of the click. */
 :root{--ink:rgba(232,240,255,.9);--muted:rgba(205,220,245,.5);--dim:rgba(220,232,255,.42);--line:rgba(170,200,255,.12);
   --ok:#e8f0ff;--warn:#f2c14e;--bad:#ef5a5a}
 *{box-sizing:border-box;margin:0}

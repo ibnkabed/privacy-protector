@@ -51,7 +51,7 @@ body:
     id: version
     attributes:
       label: Version
-      placeholder: "v1.0.0, or the commit you are running"
+      placeholder: "2.0.0, or the commit you are running"
     validations:
       required: true
 

@@ -1,6 +1,6 @@
 """Import an Apple App Privacy Report (NDJSON) into Privacy Protector.
 
-Mirrors the dashboard import flow in web/app.js (loadReport): it parses the
+Mirrors the dashboard import flow in web/orbit-panels.js (loadReport): it parses the
 report's networkActivity rows, links every observed domain to every app
 (bundleID) that contacted it — including domains shared by many apps — and
 saves the result through the running backend (/api/apps/discovered) so the
@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-# Mirror of knownAppNames in web/app.js — reports only carry bundle IDs.
+# Mirror of knownAppNames in web/orbit-panels.js — reports only carry bundle IDs.
 KNOWN_APP_NAMES = {
     "com.google.chrome.ios": "Google Chrome",
     "com.apple.mobilesafari": "Safari",
@@ -40,7 +40,7 @@ KNOWN_APP_NAMES = {
     "com.lean.tetamn": "Sehhaty",
 }
 
-# Same batching contract as web/app.js (REPORT_APP_DOMAIN_CHUNK /
+# Same batching contract as web/orbit-panels.js (REPORT_APP_DOMAIN_CHUNK /
 # REPORT_IMPORT_REQUEST_LIMIT) so requests stay below the server body limit.
 REPORT_APP_DOMAIN_CHUNK = 100
 REPORT_IMPORT_REQUEST_LIMIT = 96 * 1024

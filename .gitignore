@@ -16,7 +16,6 @@ captures/
 connection-status.json
 
 # Browser and local application state
-edge-profile/
 browser-state/
 exports/
 *.tmp
