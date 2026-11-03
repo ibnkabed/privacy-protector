@@ -32,3 +32,6 @@ Desktop.ini
 /CLAUDE.md
 /NOTES.md
 /UPDATE-PLAN.md
+/sync-manifest.json
+/sync_private.py
+/.private-patterns
