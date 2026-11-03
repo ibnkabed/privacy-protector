@@ -51,7 +51,7 @@ class OrbitDashboardTests(unittest.TestCase):
         for button in ("open-settings", "open-activity", "open-perms", "review",
                        "open-ledger", "open-paid", "open-models", "dev-pc", "dev-phone"):
             self.assertIn(f'id="{button}"', self.html)
-        for endpoint in ("/api/dns/self-test", "/api/pc/setup", "/api/pc/capability-history/setup",
+        for endpoint in ("/api/dns/self-test", "/api/pc/capability-history/setup",
                          "/api/device/apps/scan", "/api/developer-mode/status", "/api/apps/discovered",
                          "/api/logs", "/api/policy", "/api/privacy-controls", "/api/privacy-capture/start",
                          "/api/privacy-capture/stop", "/api/ai/review", "/api/ai/stop", "/api/ai/calibrate",

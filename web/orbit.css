@@ -65,3 +65,9 @@ body{font-family:"Segoe UI",system-ui,sans-serif;color:var(--ink)}
 .st-risk-red{color:var(--bad)}.st-risk-orange{color:#f2a54a}.st-risk-green{color:#4fd18b}.st-risk-none{color:var(--muted)}
 .lg col.w40p{width:40%}
 #legal{position:absolute;bottom:6px;right:12px;font-size:10.5px;color:rgba(200,214,240,.38);pointer-events:none;z-index:2}
+.pop button.sw.on{border-color:rgba(120,220,160,.6);color:#d9ffe9;background:rgba(80,200,130,.12)}
+.fld{display:block;font-size:11.5px;color:var(--muted);margin-top:6px}
+.fld textarea{display:block;width:100%;box-sizing:border-box;margin-top:3px;font:inherit;font-size:12px;background:rgba(190,210,255,.05);color:var(--ink);border:1px solid rgba(190,210,255,.15);border-radius:6px;padding:4px 8px;resize:vertical}
+.chk{font-size:11.5px;color:var(--muted);display:inline-flex;gap:4px;align-items:center}
+#wizard{top:90px;left:50%;transform:translateX(-50%);z-index:20}
+.hide{display:none}

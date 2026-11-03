@@ -1,10 +1,13 @@
 #Requires -RunAsAdministrator
 # Undoes Enable-PC-Protection.ps1 exactly: removes the watchdog, restores the
 # saved DNS servers and browser policies, and the DNS client log state.
+param([string]$DataDir = "")
 $ErrorActionPreference = "Stop"
 
-$AppRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$PcData = Join-Path $AppRoot "data\pc"
+if (-not $DataDir) {
+    $DataDir = if ($env:PRIVACY_PROTECTOR_DATA_DIR) { $env:PRIVACY_PROTECTOR_DATA_DIR } else { Join-Path (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) "data" }
+}
+$PcData = Join-Path $DataDir "pc"
 $BackupPath = Join-Path $PcData "dns-backup.json"
 $TaskName = "PrivacyProtector-PC-DNS-Watchdog"
 $InstallDir = Join-Path $env:ProgramFiles "PrivacyProtector"
@@ -48,4 +51,3 @@ if (-not $Backup.dnsClientLogWasEnabled) {
 Clear-DnsClientCache
 Remove-Item -LiteralPath $BackupPath -Force
 Write-Host "PC protection removed; previous DNS settings restored"
-Start-Sleep -Seconds 3

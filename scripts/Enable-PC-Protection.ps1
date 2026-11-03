@@ -5,10 +5,14 @@
 #   - saves the previous DNS settings once, for Disable-PC-Protection.ps1
 #   - installs a SYSTEM watchdog that falls back to Cloudflare within a
 #     minute if the engine stops, and returns to the engine when it is back
+param([string]$DataDir = "")
 $ErrorActionPreference = "Stop"
 
+if (-not $DataDir) {
+    $DataDir = if ($env:PRIVACY_PROTECTOR_DATA_DIR) { $env:PRIVACY_PROTECTOR_DATA_DIR } else { Join-Path (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) "data" }
+}
+$PcData = Join-Path $DataDir "pc"
 $AppRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$PcData = Join-Path $AppRoot "data\pc"
 New-Item -ItemType Directory -Force -Path $PcData | Out-Null
 $BackupPath = Join-Path $PcData "dns-backup.json"
 $LogPath = Join-Path $PcData "setup.log"
@@ -53,17 +57,9 @@ function Get-StaticServers([string]$Guid, [string]$Stack) {
 }
 
 if (-not (Test-Engine)) {
-    # The signed launcher starts the engine without a window (2026-10-29; it replaced Start-Privacy-Protector-Background.ps1)
-    $Starter = Join-Path $env:ProgramFiles "Privacy Protector\PrivacyProtector.exe"
-    if (Test-Path -LiteralPath $Starter) {
-        Write-SetupLog "Engine not answering; starting background service"
-        Start-Process -FilePath $Starter -ArgumentList "--start-server" -Wait
-    }
-    if (-not (Test-Engine)) {
-        Write-SetupLog "ERROR engine does not answer on 127.0.0.1:53; DNS left unchanged"
-        Read-Host "The protection engine is not running. Nothing was changed. Press Enter"
-        exit 1
-    }
+    # The app turns this on from Settings while its engine answers on 127.0.0.1:53; nothing changes otherwise.
+    Write-SetupLog "ERROR engine does not answer on 127.0.0.1:53; DNS left unchanged"
+    exit 1
 }
 
 # 1. Back up the original settings once. A second run must not overwrite them
@@ -134,4 +130,3 @@ if (Test-Engine) {
 } else {
     Write-SetupLog "WARNING engine stopped answering; the watchdog will fall back within a minute"
 }
-Start-Sleep -Seconds 3

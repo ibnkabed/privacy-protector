@@ -31,10 +31,19 @@ def free_port() -> int:
     raise RuntimeError("Could not reserve a temporary TCP/UDP port")
 
 
-def request_json(url: str, method: str = "GET") -> dict:
-    request = urllib.request.Request(url, method=method)
+def request_json(url: str, method: str = "GET", headers: dict | None = None) -> dict:
+    request = urllib.request.Request(url, method=method, headers=headers or {})
     with urllib.request.urlopen(request, timeout=2) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def status_of(url: str, method: str = "GET", headers: dict | None = None, body: bytes | None = None) -> int:
+    request = urllib.request.Request(url, method=method, headers=headers or {}, data=body)
+    try:
+        with urllib.request.urlopen(request, timeout=2) as response:
+            return response.status
+    except urllib.error.HTTPError as error:
+        return error.code
 
 
 class CleanReleaseRuntimeTests(unittest.TestCase):
@@ -94,7 +103,15 @@ class CleanReleaseRuntimeTests(unittest.TestCase):
                 status = request_json(base + "/api/status")
                 self.assertEqual(status.get("dnsPort"), dns_port)
                 self.assertTrue(status.get("ok"))
-                self.assertTrue(request_json(base + "/api/dns/cache", "DELETE").get("ok"))
+                # Changes need the session token; a page on another origin, or a rebound host name, gets nothing.
+                session = request_json(base + "/api/session")
+                auth = {session["header"]: session["token"]}
+                self.assertEqual(status_of(base + "/api/dns/cache", "DELETE"), 403)
+                self.assertEqual(status_of(base + "/api/dns/cache", "DELETE", {**auth, "Origin": "https://evil.example"}), 403)
+                self.assertEqual(status_of(base + "/api/status", headers={"Host": "evil.example"}), 403)
+                self.assertEqual(status_of(base + "/api/policy", "POST", {"Content-Type": "text/plain"},
+                                           b'{"domain": "x.example", "action": "block"}'), 403)
+                self.assertTrue(request_json(base + "/api/dns/cache", "DELETE", auth).get("ok"))
 
                 # Dashboard assets must be revalidated, or an updated orbit.css
                 # keeps loading from the browser cache after an upgrade.

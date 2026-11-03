@@ -17,7 +17,11 @@ function judgedStatus(key,status){const v=judged[key];
 
 function note(msg,ms=2600){const t=$("#note");t.textContent=msg;t.classList.add("show");clearTimeout(note.t);note.t=setTimeout(()=>t.classList.remove("show"),ms)}
 async function getJson(url,fallback){try{const r=await fetch(url,{cache:"no-store"});return await r.json()}catch(e){return fallback}}
-async function post(url,body){const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+/* Changes carry the session token the server hands only to this page (protection against other web pages) */
+let SESSION=null;
+async function session(){if(!SESSION){const r=await fetch("/api/session",{cache:"no-store"});SESSION=await r.json()}return SESSION}
+async function authHeaders(){const s=await session();return {"Content-Type":"application/json",[s.header]:s.token}}
+async function post(url,body){const r=await fetch(url,{method:"POST",headers:await authHeaders(),body:JSON.stringify(body||{})});
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||("HTTP "+r.status));return j}
 function ago(iso){if(!iso)return "never";const s=(Date.now()-new Date(iso))/1000;if(s<90)return "just now";const m=s/60;
   return m<60?Math.round(m)+"m ago":m<2880?Math.round(m/60)+"h ago":Math.round(m/1440)+"d ago"}
@@ -280,8 +284,8 @@ function coreHtml(){
     <div class="rows">
       <span>DNS engine</span><span>${s.ok?"port "+esc(s.dnsPort)+" · up "+Math.round((s.uptimeSeconds||0)/3600)+"h":"not answering"}</span>
       <span>Upstream</span><span>${prov||"—"}</span>
-      <span>Phone</span><span>${ip.recent?"connected":"not seen"} · ${ago(ip.lastSeenAt)}</span>
-      <span>PC routing</span><span>${pc.routing?.routed?"through the engine":"<b class=\"st-red\">bypassing the engine</b>"}</span>
+      <span>Phone</span><span>${chosen("phone")?`${ip.recent?"connected":"not seen"} · ${ago(ip.lastSeenAt)}`:"off"}</span>
+      <span>PC routing</span><span>${!chosen("pc")?"off":pc.routing?.routed?"through the engine":"<b class=\"st-red\">bypassing the engine</b>"}</span>
       <span>Blocked</span><span>${s.blockedDomains??"—"} phone rules · ${pc.blocked??"—"} PC rules</span>
       <span>Records</span><span>${s.events??"—"} DNS events · ${(s.classificationEngine||{}).total??"—"} domains studied</span>
       <span>Apps</span><span>${phoneApps.length} detected · ${profiles.length} monitored</span>
@@ -297,13 +301,15 @@ function coreIssues(){
 function rawCoreIssues(){
   return rawCore().map(i=>({...i,key:"core:"+(i.title+" "+(i.text||"")).replace(/\d+/g,"#").slice(0,160)}));
 }
+/* Only what you turned on in Settings can raise a warning */
+const chosen=key=>typeof choice==="function"&&choice(key);
 function rawCore(){
   const s=st.status||{}, pc=st.pc||{}, out=[];
   if(st.status&&!s.ok) out.push({sev:"red",safety:true,title:"The DNS engine isn't answering"});
   if((s.dnsEngine?.providers||[]).length&&!(s.dnsEngine.providers.some(p=>p.state==="healthy"))) out.push({sev:"red",safety:true,title:"No upstream DNS provider is healthy"});
-  if(st.pc&&pc.routing&&!pc.routing.routed) out.push({sev:"red",safety:true,title:"The PC bypasses the engine",text:"The PC's connections don't go through the engine, so nothing is watched or blocked. Turn PC protection on in Settings."});
+  if(chosen("pc")&&st.pc&&pc.routing&&!pc.routing.routed) out.push({sev:"red",safety:true,title:"The PC bypasses the engine",text:"The PC's connections don't go through the engine, so nothing is watched or blocked. Turn PC protection on in Settings."});
   const rem=s.connectionReminder||{};
-  if(rem.state==="lost"||rem.state==="disconnected") out.push({sev:"orange",title:`The phone isn't connected${rem.silentForSeconds?" for "+Math.round(rem.silentForSeconds/60)+"m":""}: reconnect it to the modem (DNS ${rem.dnsAddress||"—"})`});
+  if(chosen("phone")&&(rem.state==="lost"||rem.state==="disconnected")) out.push({sev:"orange",title:`The phone isn't connected${rem.silentForSeconds?" for "+Math.round(rem.silentForSeconds/60)+"m":""}: reconnect it to the modem (DNS ${rem.dnsAddress||"—"})`});
   if(s.judgeNotes) out.push({sev:"red",safety:true,title:`The judge couldn't settle ${s.judgeNotes} decision(s): they wait for your review`});
   if(pc.review?.lastError) out.push({sev:"orange",title:"The last PC review failed",text:pc.review.lastError});
   return out;

@@ -575,6 +575,8 @@ class CapabilityMonitor:
         self.identities: dict[str, dict[str, Any]] = {}
         # Inventory of installed programs (program_inventory): permissions are not displayed for items removed from the device.
         self.program_filter: Callable[[str, str, float], bool] | None = None
+        # The kinds you chose to watch in Settings (microphone, webcam, location, contacts); None watches all.
+        self.kind_filter: Callable[[str], bool] | None = None
         self.pending_identities: set[str] = set()
         self.live: dict[str, dict[str, Any]] = {}
         self.attribution: deque[tuple[float, int, str, str]] = deque(maxlen=50000)
@@ -617,7 +619,12 @@ class CapabilityMonitor:
         except OSError:
             pass
 
+    def watched(self, capability: str) -> bool:
+        return self.kind_filter is None or bool(self.kind_filter(str(capability)))
+
     def _append(self, record: dict[str, Any]) -> None:
+        if record.get("capability") and not self.watched(record["capability"]):
+            return
         with self.events_path.open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
         self.closed.append(record)
@@ -1178,6 +1185,8 @@ class CapabilityMonitor:
         coverage: dict[str, Any] = {}
         problems: list[str] = []
         for capability in capability_judge.FOCUS_CAPABILITIES:
+            if not self.watched(capability):
+                continue
             by = []
             if history["state"] == "live":
                 by.append("windows-history")
@@ -1206,6 +1215,8 @@ class CapabilityMonitor:
         grouped: dict[str, dict[str, Any]] = {}
         series_all = self._all_series()
         for series in series_all:
+            if not self.watched(series.get("capability", "")):
+                continue
             identity = series.get("identity") or {}
             key = f"{series['capability']}|{identity_key(identity)}"
             group = grouped.get(key)

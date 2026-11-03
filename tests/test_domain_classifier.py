@@ -10,6 +10,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
+import app
 from app import (
     APP_PURPOSE_PROFILES,
     ActivityLog,
@@ -563,7 +564,7 @@ class DomainClassificationV3Tests(unittest.TestCase):
                 self.assertEqual(payload["version"], 3)
                 self.assertIn("permanent.example", payload["domains"])
 
-                clear = urllib.request.Request(base + "/api/logs", method="DELETE")
+                clear = urllib.request.Request(base + "/api/logs", method="DELETE", headers={app.TOKEN_HEADER: app.SESSION_TOKEN})
                 json.loads(urllib.request.urlopen(clear).read())
                 after = json.loads(urllib.request.urlopen(base + "/api/classifications").read())
                 self.assertIn("permanent.example", after["domains"])

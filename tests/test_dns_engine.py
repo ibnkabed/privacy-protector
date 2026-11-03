@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import app
 from app import (
     ActivityLog,
     AppProfileStore,
@@ -353,7 +354,7 @@ class DNSEngineTests(unittest.TestCase):
                 request = urllib.request.Request(
                     base + "/api/dns/self-test",
                     data=b"{}",
-                    headers={"Content-Type": "application/json"},
+                    headers={"Content-Type": "application/json", app.TOKEN_HEADER: app.SESSION_TOKEN},
                     method="POST",
                 )
                 self_test = json.loads(urllib.request.urlopen(request, timeout=5).read())
@@ -370,7 +371,8 @@ class DNSEngineTests(unittest.TestCase):
                     logs["domainStats"]["cached-api.example"]["lastObservedAt"]
                 )
                 before_policy = policy.snapshot()
-                clear_request = urllib.request.Request(base + "/api/dns/cache", method="DELETE")
+                clear_request = urllib.request.Request(base + "/api/dns/cache", method="DELETE",
+                                                       headers={app.TOKEN_HEADER: app.SESSION_TOKEN})
                 cleared = json.loads(urllib.request.urlopen(clear_request).read())
                 self.assertTrue(cleared["ok"])
                 self.assertGreaterEqual(cleared["removed"], 1)

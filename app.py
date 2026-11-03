@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import ipaddress
 import json
 import logging
 import os
 import re
+import secrets
 import shutil
 import socket
 import socketserver
@@ -49,6 +51,8 @@ from pc_protection import PCProtection
 from capability_monitor import CapabilityMonitor
 import capability_audio
 from privacy_control import PrivacyControlStore, analyze_syslog
+from features import Features, Switch
+from settings import Settings
 import hidden_window
 import paths
 
@@ -2065,6 +2069,31 @@ class AppState:
         self.connection_reminder = connection_reminder
         self.ai_reviewer = ai_reviewer
         self.started_at = time.time()
+        self.settings: Any = None
+        self.features: Any = None
+        self.listeners: Any = None
+
+    @property
+    def listening_host(self) -> str:
+        if self.listeners is not None and self.listeners.host:
+            return "127.0.0.1" if self.listeners.host == "0.0.0.0" else self.listeners.host
+        return "127.0.0.1" if self.dns_host in ("auto", "0.0.0.0") else self.dns_host
+
+
+# Every request that changes something carries this per-run token, so a web page open in the browser
+# cannot drive the app (CSRF). It is created at start and served only to the dashboard's own origin.
+SESSION_TOKEN = secrets.token_urlsafe(32)
+TOKEN_HEADER = "X-Privacy-Protector-Token"
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]", "::1"}
+
+
+def _local_host(netloc: str) -> bool:
+    host = str(netloc or "").strip().lower()
+    if host.startswith("["):
+        host = host[: host.find("]") + 1] if "]" in host else host
+    else:
+        host = host.split(":", 1)[0]
+    return host in LOCAL_HOSTS
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
@@ -2088,8 +2117,17 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def _local_request(self) -> bool:
-        host = self.headers.get("Host", "").split(":", 1)[0]
-        return host in {"127.0.0.1", "localhost", "[::1]"}
+        """The Host header names this computer. A page that rebinds its own name to 127.0.0.1 still sends
+        its own name here, so it is refused before it can read anything."""
+        return _local_host(self.headers.get("Host", ""))
+
+    def _allowed_change(self) -> bool:
+        """A request that changes something must come from the dashboard itself: same origin when the
+        browser says where it comes from, and the session token that only the dashboard can read."""
+        origin = self.headers.get("Origin")
+        if origin and not _local_host(urllib.parse.urlsplit(origin).netloc):
+            return False
+        return hmac.compare_digest(self.headers.get(TOKEN_HEADER, ""), SESSION_TOKEN)
 
     def _request_path(self) -> tuple[str, dict[str, list[str]]]:
         parsed = urllib.parse.urlparse(self.path)
@@ -2104,8 +2142,67 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             raise ValueError("Invalid request format")
         return value
 
+    def _settings_view(self) -> dict[str, Any]:
+        settings = self.state.settings.snapshot() if self.state.settings is not None else {}
+        features, listeners = self.state.features, self.state.listeners
+        return {
+            "settings": settings,
+            "lastError": features.last_error if features is not None else "",
+            "dns": {"host": listeners.host if listeners is not None else self.state.dns_host,
+                    "port": self.state.dns_port, "error": listeners.error if listeners is not None else ""},
+        }
+
+    def _save_providers(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Saves the provider list from Settings. An empty key keeps the key already saved for that name."""
+        import ai_providers
+
+        current = ai_providers.load_config()
+        keys = {str(p.get("name")): p.get("apiKey", "") for p in current.get("providers") or [] if isinstance(p, dict)}
+        providers = []
+        for raw in payload.get("providers") or []:
+            if not isinstance(raw, dict) or not str(raw.get("name") or "").strip():
+                continue
+            item = {k: raw[k] for k in ("name", "kind", "baseUrl", "model", "apiKeyEnv", "roles", "enabled", "dailyLimit")
+                    if k in raw}
+            item["name"] = str(item["name"]).strip()[:40]
+            key = str(raw.get("apiKey") or "")
+            if key or keys.get(item["name"]):
+                item["apiKey"] = key or keys[item["name"]]
+            providers.append(item)
+        enabled = bool(self.state.settings.enabled("models")) if self.state.settings is not None else bool(current.get("enabled"))
+        ai_providers.save_config({"enabled": enabled, "providers": providers})
+        return {"ok": True, "providers": [p.public() for p in ai_providers.configured_providers()]}
+
     def do_GET(self) -> None:
+        if not self._local_request():
+            self._json({"error": "Local requests only"}, HTTPStatus.FORBIDDEN)
+            return
         path, query = self._request_path()
+        if path == "/api/session":
+            # Readable only by a page served from this origin: no CORS header is ever sent.
+            self._json({"token": SESSION_TOKEN, "header": TOKEN_HEADER})
+            return
+        if path == "/api/settings":
+            self._json(self._settings_view())
+            return
+        if path == "/api/user-exceptions":
+            import user_exceptions
+
+            self._json(user_exceptions.load())
+            return
+        if path == "/api/ai/providers":
+            import ai_providers
+
+            config = ai_providers.load_config()
+            providers = []
+            for raw in config.get("providers") or []:
+                if isinstance(raw, dict):
+                    item = {k: v for k, v in raw.items() if k != "apiKey"}
+                    item["hasKey"] = bool(raw.get("apiKey") or raw.get("apiKeyEnv"))
+                    providers.append(item)
+            self._json({"enabled": bool(config.get("enabled")), "providers": providers,
+                        "usage": ai_providers.usage_today()})
+            return
         if path == "/":
             # "Moonlit Night" is the only painting
             self.path = "/orbit.html"
@@ -2292,9 +2389,28 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if not self._local_request():
             self._json({"error": "Local requests only"}, HTTPStatus.FORBIDDEN)
             return
+        if not self._allowed_change():
+            self._json({"error": "Missing or wrong session token"}, HTTPStatus.FORBIDDEN)
+            return
         path, _ = self._request_path()
         try:
             payload = self._read_json()
+            if path == "/api/settings":
+                if self.state.settings is None:
+                    self._json({"error": "Settings unavailable"}, HTTPStatus.SERVICE_UNAVAILABLE)
+                    return
+                self.state.settings.update(payload)
+                self._json(self._settings_view())
+                return
+            if path == "/api/user-exceptions":
+                import user_exceptions
+
+                _, rejected = user_exceptions.apply(payload)
+                self._json({"ok": True, "rejected": rejected, **user_exceptions.load()})
+                return
+            if path == "/api/ai/providers":
+                self._json(self._save_providers(payload))
+                return
             if path == "/api/restart":
                 # Seamless restart: every `--restart-server` used to cut internet
                 # for about eight seconds because the engine was the device's only name server. The backend starts via WMI and loads everything
@@ -2396,7 +2512,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 return
             if path == "/api/dns/self-test":
                 result = self.state.resolver.run_self_test(
-                    self.state.dns_host, self.state.dns_port
+                    self.state.listening_host, self.state.dns_port
                 )
                 status = HTTPStatus.OK if result.get("state") == "passed" else HTTPStatus.SERVICE_UNAVAILABLE
                 self._json(result, status)
@@ -2714,6 +2830,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if not self._local_request():
             self._json({"error": "Local requests only"}, HTTPStatus.FORBIDDEN)
             return
+        if not self._allowed_change():
+            self._json({"error": "Missing or wrong session token"}, HTTPStatus.FORBIDDEN)
+            return
         path, query = self._request_path()
         if path == "/api/logs":
             result = self.state.activity.clear()
@@ -2800,9 +2919,13 @@ def take_over(web_port: int) -> None:
     """Asks the running engine to exit after the successor has loaded everything, so the internet is only interrupted for a moment."""
     import urllib.request
 
-    request = urllib.request.Request(f"http://127.0.0.1:{web_port}/api/handoff", data=b"{}", method="POST",
-                                     headers={"Content-Type": "application/json"})
     try:
+        base = f"http://127.0.0.1:{web_port}"
+        with urllib.request.urlopen(base + "/api/session", timeout=5) as reply:
+            session = json.loads(reply.read().decode("utf-8"))
+        request = urllib.request.Request(base + "/api/handoff", data=b"{}", method="POST",
+                                         headers={"Content-Type": "application/json",
+                                                  str(session.get("header") or TOKEN_HEADER): str(session.get("token") or "")})
         urllib.request.urlopen(request, timeout=5).read()
         return
     except Exception as error:  # noqa: BLE001 - an old predecessor doesn't know about handoff, or there is none
@@ -2830,10 +2953,60 @@ def bind_dns(resolver: Resolver, host: str, port: int, patient: bool) -> tuple[A
             time.sleep(0.02)
 
 
+class DnsListeners:
+    """The DNS servers the engine answers on, moved when the phone or PC switch changes:
+    the whole local network for the phone, this computer only for the PC, nothing when both are off."""
+
+    def __init__(self, resolver: Resolver, port: int, patient: bool = False):
+        self.resolver = resolver
+        self.port = port
+        self.patient = patient
+        self.host: str | None = None
+        self.servers: list[Any] = []
+        self.lock = threading.Lock()
+        self.error = ""
+
+    def bind(self, host: str | None) -> None:
+        with self.lock:
+            if host == self.host and (self.servers or host is None):
+                return
+            self._close()
+            self.host, self.error = host, ""
+            if host is None:
+                return
+            try:
+                self.servers += list(bind_dns(self.resolver, host, self.port, patient=self.patient))
+            except OSError as exc:
+                self.error = f"Could not answer DNS on {host}:{self.port}: {exc}"
+                logging.warning(self.error)
+                return
+            if host in {"0.0.0.0", "127.0.0.1"}:
+                # Windows also queries an IPv6 server, so answer on ::1 so nothing slips through.
+                try:
+                    self.servers += list(bind_dns(self.resolver, "::1", self.port, patient=self.patient))
+                except OSError as exc6:
+                    logging.warning("IPv6 loopback DNS unavailable: %s", exc6)
+            self.patient = False
+
+    def _close(self) -> None:
+        for server in self.servers:
+            try:
+                server.shutdown()
+                server.server_close()
+            except OSError:
+                pass
+        self.servers = []
+
+    def close(self) -> None:
+        with self.lock:
+            self._close()
+            self.host = None
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Privacy Protector")
-    parser.add_argument("--dns-host", default="0.0.0.0")
-    parser.add_argument("--dns-port", type=int, default=53053)
+    parser.add_argument("--dns-host", default="auto", help="auto follows the phone and PC switches in Settings")
+    parser.add_argument("--dns-port", type=int, default=53)
     parser.add_argument("--web-host", default="127.0.0.1")
     parser.add_argument("--web-port", type=int, default=8733)
     parser.add_argument("--upstream", default=DEFAULT_UPSTREAM)
@@ -2941,22 +3114,13 @@ def main() -> None:
         invalidate=resolver.cache.invalidate,
     )
 
-    udp6 = tcp6 = None
     if args.handoff:
         take_over(args.web_port)
-    try:
-        udp, tcp = bind_dns(resolver, args.dns_host, args.dns_port, patient=args.handoff)
-        if args.dns_host in {"0.0.0.0", "127.0.0.1"}:
-            # Windows also queries an IPv6 server, so answer on ::1 so nothing slips through.
-            try:
-                udp6, tcp6 = bind_dns(resolver, "::1", args.dns_port, patient=args.handoff)
-            except OSError as exc6:
-                logging.warning("IPv6 loopback DNS unavailable: %s", exc6)
-    except OSError as exc:
-        raise SystemExit(
-            f"Could not start DNS on port {args.dns_port}: {exc}. "
-            "Try port 5353 or run iPhone mode with administrator privileges."
-        ) from exc
+    listeners = DnsListeners(resolver, args.dns_port, patient=args.handoff)
+    user_settings = Settings()
+    if args.dns_host != "auto":
+        # An explicit --dns-host (tests, development) listens there whatever the switches say.
+        listeners.bind(args.dns_host)
 
     state = AppState(
         policy,
@@ -2988,24 +3152,14 @@ def main() -> None:
             time.sleep(0.02)
 
     print(f"Privacy Protector: http://{args.web_host}:{args.web_port}")
-    print(
-        f"DNS: {args.dns_host}:{args.dns_port} -> {args.upstream} "
-        f"(fallback: {args.fallback_upstream})"
-    )
+    print(f"DNS port {args.dns_port} -> {args.upstream} (fallback: {args.fallback_upstream})")
     classifications.start()
-    evidence_monitor.start()
-    connection_reminder.start()
-    pc.start()
-    capabilities.start()
-    phone_auto.start()
     # Inventory of what remains installed: removes from the planets what was uninstalled from the PC and phone, and adds new phone apps.
     inventory = ProgramInventory(PC_ROOT)
     pc.inventory = inventory
-    inventory.start(pc, capabilities, scan_paired_iphone_apps, profiles)
-    # Pairing with Windows Defender and Outlook protection (docs/plan-windows-defender.md, phase 3).
+    # Windows Defender: its state, its detections, and a scan of new downloads.
     defender = DefenderBridge(PC_ROOT)
     pc.defender = defender
-    defender.start()
 
     def mail_verdict(domain: str) -> str:
         if "block" in (pc_policy.action_for(domain), policy.action_for(domain)):
@@ -3023,13 +3177,30 @@ def main() -> None:
     mail = MailWatch(PC_ROOT, mail_verdict, badge=None if args.no_tray else tray_icon.mail_badge,
                      on_images=release_mail_images)
     pc.mail = mail
-    mail.start()
-    # Cleaning temporary files instead of Norton (docs/plan-temp-cleanup.md): at 9 PM, and the first time with the user's approval.
+    # Cleaning temporary files: daily at 9 pm, and the first time only after you approve what it deletes.
     cleanup = TempCleanup(PC_ROOT)
     pc.temp_cleanup = cleanup
-    cleanup.start()
+    # Each part runs only while its switch in Settings is on.
+    features = Features(
+        user_settings,
+        dns=listeners.bind if args.dns_host == "auto" else (lambda host: None),
+        capabilities=capabilities,
+        switches={
+            "phone": [Switch("phone review", phone_auto), Switch("phone reminder", connection_reminder),
+                      Switch("phone evidence", evidence_monitor)],
+            "pc": [Switch("pc protection", pc)],
+            "any": [Switch("inventory", inventory,
+                           lambda s: s.start(pc, capabilities, scan_paired_iphone_apps, profiles))],
+            "capabilities": [Switch("capability monitor", capabilities)],
+            "outlook": [Switch("outlook", mail)],
+            "defender": [Switch("defender", defender)],
+            "tempCleanup": [Switch("temp cleanup", cleanup)],
+        },
+    )
+    state.settings, state.features, state.listeners = user_settings, features, listeners
+    features.start()
     tray = None if args.no_tray else tray_icon.start(f"http://127.0.0.1:{args.web_port}")
-    if not args.no_tray:
+    if not args.no_tray and user_settings.enabled("outlook"):
         tray_icon.start_mail(mail.request_show)
     try:
         dashboard.serve_forever()
@@ -3038,24 +3209,11 @@ def main() -> None:
     finally:
         tray_icon.stop(tray)
         dashboard.shutdown()
-        udp.shutdown()
-        tcp.shutdown()
+        listeners.close()
         classifications.shutdown()
-        evidence_monitor.shutdown()
-        connection_reminder.shutdown()
-        pc.shutdown()
-        capabilities.shutdown()
-        phone_auto.shutdown()
-        inventory.shutdown()
-        defender.shutdown()
-        mail.shutdown()
-        cleanup.shutdown()
-        for server in (udp6, tcp6):
-            if server is not None:
-                server.shutdown()
-                server.server_close()
+        for items in features.switches.values():
+            for switch in items:
+                switch.set(False)
         dashboard.server_close()
-        udp.server_close()
-        tcp.server_close()
 if __name__ == "__main__":
     main()

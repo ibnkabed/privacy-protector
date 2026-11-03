@@ -17,7 +17,7 @@ const cleanDomain = v => String(v||"").trim().toLowerCase().replace(/\.$/,"");
 function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function armed(b,label){if(b.classList.contains("arm"))return true;const t=b.textContent;b.classList.add("arm");b.textContent=label;
   setTimeout(()=>{b.classList.remove("arm");b.textContent=t},4000);return false}
-async function send(method,url,body){const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body)});
+async function send(method,url,body){const r=await fetch(url,{method,headers:await authHeaders(),body:body===undefined?undefined:JSON.stringify(body)});
   const j=await r.json().catch(()=>({}));if(!r.ok||j.error)throw new Error(j.error||("HTTP "+r.status));return j}
 const opts=(list,cur)=>list.map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("");
 const riskOf=d=>{const r=(classes[d]||{}).risk;return r==="unclassified"?"":(r||"")};
@@ -31,19 +31,19 @@ function drawSettings(){
   const q=String($("#det-q")?.value||"").toLowerCase(), focus=document.activeElement?.id==="det-q";
   const shown=detected.filter(a=>`${a.name} ${a.bundleID}`.toLowerCase().includes(q));
   const dev=tools.dev;
-  show(`<h2>Settings</h2>
-    <h3>Connections</h3>
+  show(`<h2>Settings</h2>${choicesHtml()}
+    <div class="sec"><h3>Connections</h3>
     <div class="rows">
       <span>Local service</span><span>${s.ok?"running":"<b class=\"st-red\">stopped</b>"}</span>
-      <span>Phone</span><span class="${rem.state==="connected"?"":"st-orange"}">${esc(REMIND[rem.state]||rem.state||"—")} · DNS ${esc(rem.dnsAddress||"—")}${rem.state==="connected"?"":` · ${Math.max(1,Math.round((rem.silentForSeconds||rem.disconnectedForSeconds||0)/60))}m`}</span>
-      <span>PC</span><span class="${pc.routing?.routed?"":"st-red"}">${pc.routing?.routed?"protected: traffic goes through the engine":"not protected: traffic bypasses the engine"}</span>
+      <span>Phone</span>${!choice("phone")?"<span>off</span>":""}<span class="${!choice("phone")?"hide":rem.state==="connected"?"":"st-orange"}">${esc(REMIND[rem.state]||rem.state||"—")} · DNS ${esc(rem.dnsAddress||"—")}${rem.state==="connected"?"":` · ${Math.max(1,Math.round((rem.silentForSeconds||rem.disconnectedForSeconds||0)/60))}m`}</span>
+      <span>PC</span>${!choice("pc")?"<span>off</span>":""}<span class="${!choice("pc")?"hide":pc.routing?.routed?"":"st-red"}">${pc.routing?.routed?"protected: traffic goes through the engine":"not protected: traffic bypasses the engine"}</span>
       <span>Windows history</span><span class="${hist.state==="live"?"":"st-orange"}">${esc(hist.state||"—")}${hist.lastCopyAt?" · copied "+ago(hist.lastCopyAt):""}</span>
       <span>DNS self-test</span><span>${test?`${esc(test.state)} · ${ago(test.finishedAt||test.at||test.time)}`:"not run"}</span>
     </div>
     <div class="btns"><button data-t="dns-test">Test DNS</button>
-      ${pc.routing?.routed?"":`<button data-t="pc-setup">Enable PC protection</button>`}
-      ${hist.state&&hist.state!=="live"?`<button data-t="hist-setup">Enable Windows history</button>`:""}</div>
-    <div class="mut gap6">Enabling asks for Windows approval once. If the engine stops, the internet comes back by itself within a minute.</div>
+      ${hist.state&&hist.state!=="live"&&choice("capabilities")?`<button data-t="hist-setup">Enable Windows history</button>`:""}</div>
+    <div class="mut gap6">If the engine stops, the PC's internet comes back by itself within a minute.</div></div>
+    ${choicesExtraHtml()}
     <div class="sec"><h3>iPhone</h3>
       <div class="btns"><label class="filebtn">Import Apple privacy report<input type="file" id="report-file" accept=".ndjson,application/x-ndjson"></label>
         <button data-t="scan-iphone">Read apps from the iPhone</button><button data-t="dev-check">${tools.devBusy?"Checking…":"Check developer mode"}</button></div>
@@ -101,6 +101,97 @@ async function monitorApp(bundle){
   const r=await send("POST","/api/apps",{name:a.purposeDisplayName||a.name||a.bundleID,bundleID:a.bundleID,processName:a.processName||""});
   if((a.domains||[]).length)await send("POST",`/api/apps/${encodeURIComponent(r.profile.id)}/domains`,{source:"confirmed",domains:a.domains});
   note(`${r.profile.name} is monitored`); await reloadSlow();
+}
+
+
+/* ------------------------------------------------------------ Your choices: what is watched and protected */
+const SWITCH_ROWS=[["phone","Phone protection","DNS protection for a phone that uses this computer as its DNS server"],
+  ["pc","PC protection","DNS protection for this computer itself"],
+  ["capabilities","Device access","Which programs use the microphone, camera, location and contacts"],
+  ["outlook","Outlook mail","Checks new mail in classic Outlook and removes dangerous messages"],
+  ["defender","Windows Defender","Shows Defender's state and asks it to scan new downloads; never changes its settings"],
+  ["tempCleanup","Temp cleanup","Deletes old temporary files daily at 9 pm, after you approve the first run"],
+  ["models","AI review","A second reading of unclear domains by AI providers you add below, with your own keys"]];
+const KIND_ROWS=[["microphone","Microphone"],["webcam","Camera"],["location","Location"],["contacts","Contacts"]];
+function choice(key){const c=tools.settings?.settings;if(!c)return false;return key==="capabilities"?!!c.capabilities?.enabled:!!c[key]}
+function switchBtn(key,on,label){return `<button class="sw${on?" on":""}" data-t="set" data-k="${esc(key)}" aria-pressed="${on}">${esc(label)}: ${on?"On":"Off"}</button>`}
+function choicesHtml(){
+  const v=tools.settings; if(!v)return `<div class="empty">…</div>`;
+  const c=v.settings||{}, caps=c.capabilities||{};
+  return `<div class="lg-key">Everything is off until you turn it on. Each switch works at once; turning one off removes what it changed in Windows.</div>
+    ${v.lastError?`<div class="dom orange"><div class="t">${esc(v.lastError)}</div><div class="l">Windows asks for approval once; try the switch again and approve it.</div></div>`:""}
+    ${v.dns?.error?`<div class="dom red"><div class="t">${esc(v.dns.error)}</div></div>`:""}
+    ${SWITCH_ROWS.map(([k,l,d])=>`<div class="dom"><div class="btns">${switchBtn(k,choice(k),l)}</div><div class="l mut">${esc(d)}</div>
+      ${k==="capabilities"&&caps.enabled?`<div class="btns">${KIND_ROWS.map(([kk,ll])=>switchBtn(kk,!!caps[kk],ll)).join("")}</div>`:""}</div>`).join("")}
+    <h3>Language</h3><div class="btns">${[["en","English"],["ar","العربية"]].map(([code,label])=>`<button class="sw${(c.language||"en")===code?" on":""}" data-t="lang" data-v="${code}">${label}</button>`).join("")}</div>`;
+}
+function linesOf(id){return String($("#"+id)?.value||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
+function choicesExtraHtml(){
+  const ex=tools.exceptions||{hosts:{},programs:[],apps:[]};
+  const hosts=Object.entries(ex.hosts||{}).map(([h,n])=>n?`${h} ${n}`:h).join("\n");
+  const prov=tools.providers||{providers:[]};
+  return `<div class="sec"><h3>Trusted by you</h3><div class="lg-key">Never blocked or flagged. One per line.</div>
+      <label class="fld">Hosts (a full host name, then an optional note)<textarea id="ex-hosts" rows="3">${esc(hosts)}</textarea></label>
+      <label class="fld">Program folders (under Program Files, AppData\\Local\\Programs or Documents)<textarea id="ex-programs" rows="2">${esc((ex.programs||[]).join("\n"))}</textarea></label>
+      <label class="fld">Apps (a phone bundle ID or a PC program name)<textarea id="ex-apps" rows="2">${esc((ex.apps||[]).join("\n"))}</textarea></label>
+      <div class="btns"><button data-t="ex-save">Save trusted lists</button></div></div>
+    ${choice("models")?`<div class="sec"><h3>AI providers</h3><div class="lg-key">Your keys stay on this computer and go only to the provider you name. Roles: the writer reads first, jurors decide, the judge confirms. One provider may hold all three.</div>
+      ${(prov.providers||[]).map((p,i)=>providerHtml(p,i)).join("")}${providerHtml({kind:"openai",roles:["writer","juror","judge"],enabled:true},(prov.providers||[]).length,true)}
+      <div class="btns"><button data-t="prov-save">Save providers</button><button data-t="ai-exam">Test them</button></div></div>`:""}`;
+}
+function providerHtml(p,i,blank){
+  const roles=new Set(p.roles||[]);
+  return `<div class="dom prov" data-i="${i}"><div class="t">${blank?"Add a provider":esc(p.name)}</div>
+    <div class="tool-bar"><input data-f="name" placeholder="Name" value="${esc(p.name||"")}">
+      <select data-f="kind">${opts([["openai","OpenAI-compatible"],["anthropic","Anthropic"]],p.kind||"openai")}</select></div>
+    <div class="tool-bar"><input data-f="baseUrl" placeholder="https://api.example.com/v1" value="${esc(p.baseUrl||"")}"><input data-f="model" placeholder="Model" value="${esc(p.model||"")}"></div>
+    <div class="tool-bar"><input data-f="apiKey" type="password" autocomplete="off" placeholder="${p.hasKey?"Key saved (leave empty to keep it)":"API key"}">
+      <input data-f="dailyLimit" type="number" min="0" placeholder="Daily limit" value="${esc(p.dailyLimit||"")}"></div>
+    <div class="btns">${["writer","juror","judge"].map(r=>`<label class="chk"><input type="checkbox" data-role="${r}"${roles.has(r)?" checked":""}> ${r}</label>`).join("")}
+      <label class="chk"><input type="checkbox" data-f="enabled"${p.enabled===false?"":" checked"}> enabled</label></div></div>`;
+}
+function collectProviders(){
+  return [...document.querySelectorAll(".prov")].map(el=>{const val=f=>el.querySelector(`[data-f="${f}"]`);
+    return {name:val("name").value.trim(),kind:val("kind").value,baseUrl:val("baseUrl").value.trim(),model:val("model").value.trim(),
+      apiKey:val("apiKey").value,dailyLimit:+val("dailyLimit").value||0,enabled:val("enabled").checked,
+      roles:[...el.querySelectorAll("[data-role]")].filter(x=>x.checked).map(x=>x.dataset.role)}}).filter(p=>p.name);
+}
+async function loadSettings(){
+  const [v,ex,pr]=await Promise.all([getJson("/api/settings",null),getJson("/api/user-exceptions",null),getJson("/api/ai/providers",null)]);
+  if(v)tools.settings=v; if(ex)tools.exceptions=ex; if(pr)tools.providers=pr;
+  applyLanguage(); if(v&&!v.settings?.firstRunDone)showWizard();
+}
+async function saveSettings(patch,msg){
+  const busy=patch.phone!==undefined||patch.pc!==undefined;
+  if(busy)note("Windows may ask for approval…",6000);
+  tools.settings=await send("POST","/api/settings",patch); applyLanguage();
+  note(tools.settings.lastError||msg||"Saved",tools.settings.lastError?7000:2600);
+  await reloadSlow(); if(view==="open-settings")drawSettings();
+}
+/* First run: ask what to protect, and turn on only that */
+function showWizard(){
+  if($("#wizard"))return;
+  const w=document.createElement("div"); w.id="wizard"; w.className="pop show wide";
+  w.innerHTML=`<h2>Welcome to Privacy Protector</h2><div class="mut">What do you want to protect? You can change this any time in Settings.</div>
+    <div class="btns gap8"><button data-t="wiz" data-v="phone">My phone</button><button data-t="wiz" data-v="pc">This PC</button>
+      <button data-t="wiz" data-v="both">Both</button><button data-t="wiz" data-v="none">Nothing yet, just look</button></div>
+    <div class="mut gap8">Protecting the phone or the PC changes Windows DNS or firewall settings, so Windows asks for approval once. Turning it off later restores everything.</div>`;
+  document.body.appendChild(w);
+}
+async function settingsClick(b){
+  const t=b.dataset.t;
+  if(t==="set"){const k=b.dataset.k, kinds=KIND_ROWS.map(x=>x[0]);
+    const patch=kinds.includes(k)?{capabilities:{[k]:!b.classList.contains("on")}}:k==="capabilities"?{capabilities:{enabled:!choice(k)}}:{[k]:!choice(k)};
+    b.disabled=true; await saveSettings(patch); return true}
+  if(t==="lang"){await saveSettings({language:b.dataset.v}); return true}
+  if(t==="wiz"){const v=b.dataset.v; $("#wizard")?.remove();
+    await saveSettings({firstRunDone:true,phone:v==="phone"||v==="both",pc:v==="pc"||v==="both"},"Done. More switches are in Settings."); return true}
+  if(t==="ex-save"){const hosts={};linesOf("ex-hosts").forEach(l=>{const [h,...n]=l.split(/\s+/);hosts[h]=n.join(" ")});
+    const r=await send("POST","/api/user-exceptions",{hosts,programs:linesOf("ex-programs"),apps:linesOf("ex-apps")});
+    tools.exceptions=r; note((r.rejected||[]).length?"Not saved: "+r.rejected.join("; "):"Trusted lists saved",(r.rejected||[]).length?8000:2600); drawSettings(); return true}
+  if(t==="prov-save"){const r=await send("POST","/api/ai/providers",{providers:collectProviders()});
+    tools.providers=await getJson("/api/ai/providers",tools.providers); note(`${(r.providers||[]).length} provider(s) ready`); drawSettings(); return true}
+  return false;
 }
 
 /* ------------------------------------------------------------ Activity and operations box */
@@ -255,7 +346,7 @@ function pollAI(){clearTimeout(tools.aiPoll);if(tools.ai?.progress?.state!=="run
 /* ------------------------------------------------------------ Panel linking */
 async function reloadSlow(){slowAt=0;await load()}
 const TOOL_PANELS={
-  "open-settings":async()=>{drawSettings();const c=await getJson("/api/pc/capabilities",null);if(c)tools.caps=c;if(view==="open-settings")drawSettings()},
+  "open-settings":async()=>{drawSettings();const c=await getJson("/api/pc/capabilities",null);if(c)tools.caps=c;await loadSettings();if(view==="open-settings")drawSettings()},
   "open-activity":async()=>{drawActivity();await fetchLogs();if(view==="open-activity")drawActivity()},
   "open-perms":async()=>{drawPerms();await loadPerms();if(view==="open-perms")drawPerms()},
 };
@@ -273,12 +364,12 @@ document.addEventListener("input",e=>{if(e.target.id==="det-q")drawSettings()});
 
 async function toolClick(b){
   const t=b.dataset.t; if(!t)return false;
+  try{if(await settingsClick(b))return true}catch(err){note("Couldn't save: "+err.message,6000);b.disabled=false;return true}
   const dom=b.dataset.dom, act=b.dataset.a;
   try{
     switch(t){
       case "dns-test":{b.disabled=true;const r=await send("POST","/api/dns/self-test",{});const ok=(r.checks||[]).filter(x=>x.state==="passed").length;
         note(`DNS test ${r.state==="passed"?"passed":"incomplete"}: ${ok}/${(r.checks||[]).length}`,5000);await load();drawSettings();break}
-      case "pc-setup":{b.disabled=true;await send("POST","/api/pc/setup",{});note("Approve the Windows prompt. The state updates by itself.",6000);break}
       case "hist-setup":{b.disabled=true;await send("POST","/api/pc/capability-history/setup",{});note("Approve the Windows prompt. The history shows up within minutes.",6000);break}
       case "scan-iphone":{b.disabled=true;b.textContent="Reading…";const r=await send("POST","/api/device/apps/scan",{});note(`${r.count} apps read from the iPhone`);await reloadSlow();drawSettings();break}
       case "dev-check":await devCheck();break;
@@ -318,3 +409,4 @@ async function toolClick(b){
   }catch(err){note("Couldn't do it: "+err.message,6000);b.disabled=false}
   return true;
 }
+loadSettings();
