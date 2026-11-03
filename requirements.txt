@@ -1,1 +1,7 @@
+# Tray icon
+pystray==0.19.5
+Pillow==10.4.0
+# Outlook checking (COM)
+pywin32==312
+# Optional paired-iPhone tools (USB); the app works without them
 pymobiledevice3==10.3.0

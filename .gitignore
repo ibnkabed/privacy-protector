@@ -35,3 +35,7 @@ Desktop.ini
 /sync-manifest.json
 /sync_private.py
 /.private-patterns
+
+# Build output
+/build/
+/dist/

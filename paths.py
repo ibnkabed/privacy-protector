@@ -3,7 +3,8 @@ r"""Where Privacy Protector reads its bundled files and keeps its data.
 - APP_ROOT: the program's own files (web dashboard, scripts, defaults). Inside the
   installed exe this is the unpacked bundle.
 - DATA_ROOT: everything the app writes. `PRIVACY_PROTECTOR_DATA_DIR` wins; the
-  installed exe uses %LOCALAPPDATA%\PrivacyProtector; a source checkout uses ./data.
+  otherwise %LOCALAPPDATA%\PrivacyProtector\data, the same folder version 1 used, so an
+  upgrade keeps your rules and history.
 """
 from __future__ import annotations
 
@@ -19,9 +20,7 @@ def _data_root() -> Path:
     override = os.environ.get("PRIVACY_PROTECTOR_DATA_DIR", "").strip()
     if override:
         return Path(override).expanduser().resolve()
-    if FROZEN:
-        return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "PrivacyProtector"
-    return APP_ROOT / "data"
+    return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "PrivacyProtector" / "data"
 
 
 DATA_ROOT = _data_root()

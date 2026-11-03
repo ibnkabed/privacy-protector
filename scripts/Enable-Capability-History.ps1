@@ -1,16 +1,21 @@
-﻿# Installs a scheduled task running as SYSTEM that copies the Windows capability access log to a folder the user can read every 5 minutes.
+# Installs a scheduled task running as SYSTEM that copies the Windows capability access log to a folder the user can read every 5 minutes.
 #
 # Since the 2026-09-23 update, Windows writes camera, microphone, and location usage times only to
 # C:\ProgramData\Microsoft\Windows\CapabilityAccessManager\CapabilityAccessManager.db, which only
-# SYSTEM can read. This task copies it read-only to C:\ProgramData\PrivacyProtector\capability-history.
+# SYSTEM can read. This task copies it read-only to C:\ProgramData\PrivacyProtector.OpenSource\capability-history.
 #
-# The copy script is a visible file in C:\ProgramData\PrivacyProtector\bin, writable only by SYSTEM and administrators,
+# The copy script is a visible file in C:\ProgramData\PrivacyProtector.OpenSource\bin, writable only by SYSTEM and administrators,
 # so the task never runs a file a standard user could modify. It does not embed an encoded command (EncodedCommand):
 # A protection program silently deleted the task when it was in this form.
 # To revert: scripts\Disable-Capability-History.ps1
 #Requires -RunAsAdministrator
+param([string]$DataDir = "")
+if (-not $DataDir) {
+    $DataDir = if ($env:PRIVACY_PROTECTOR_DATA_DIR) { $env:PRIVACY_PROTECTOR_DATA_DIR } else { Join-Path $env:LOCALAPPDATA "PrivacyProtector.OpenSource\data" }
+}
 $ErrorActionPreference = 'Stop'
-$Log = Join-Path $PSScriptRoot '..\data\pc\capability-history-setup.log'
+New-Item -ItemType Directory -Force -Path (Join-Path $DataDir 'pc') | Out-Null
+$Log = Join-Path $DataDir 'pc\capability-history-setup.log'
 function Write-Log([string]$Text) { "$(Get-Date -Format o) $Text" | Out-File -FilePath $Log -Append -Encoding utf8 }
 
 function New-OwnerAcl([Security.Principal.SecurityIdentifier]$Owner) {
@@ -27,8 +32,8 @@ function New-OwnerAcl([Security.Principal.SecurityIdentifier]$Owner) {
 }
 
 try {
-    $TaskName = 'PrivacyProtector-CapabilityHistory'
-    $Base = Join-Path $env:ProgramData 'PrivacyProtector'
+    $TaskName = 'PrivacyProtector.OpenSource-CapabilityHistory'
+    $Base = Join-Path $env:ProgramData 'PrivacyProtector.OpenSource'
     $Dest = Join-Path $Base 'capability-history'
     $Bin = Join-Path $Base 'bin'
     $Script = Join-Path $Bin 'Copy-CapabilityHistory.ps1'
@@ -43,7 +48,7 @@ try {
 # Privacy Protector: copies the Windows capability-usage history (read-only) for the owner's monitoring.
 $ErrorActionPreference = 'Stop'
 $src = Join-Path $env:ProgramData 'Microsoft\Windows\CapabilityAccessManager'
-$dst = Join-Path $env:ProgramData 'PrivacyProtector\capability-history'
+$dst = Join-Path $env:ProgramData 'PrivacyProtector.OpenSource\capability-history'
 try {
   foreach ($name in 'CapabilityAccessManager.db-wal', 'CapabilityAccessManager.db-shm', 'CapabilityAccessManager.db') {
     $from = Join-Path $src $name

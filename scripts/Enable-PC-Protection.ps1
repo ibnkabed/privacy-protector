@@ -9,15 +9,15 @@ param([string]$DataDir = "")
 $ErrorActionPreference = "Stop"
 
 if (-not $DataDir) {
-    $DataDir = if ($env:PRIVACY_PROTECTOR_DATA_DIR) { $env:PRIVACY_PROTECTOR_DATA_DIR } else { Join-Path (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) "data" }
+    $DataDir = if ($env:PRIVACY_PROTECTOR_DATA_DIR) { $env:PRIVACY_PROTECTOR_DATA_DIR } else { Join-Path $env:LOCALAPPDATA "PrivacyProtector\data" }
 }
 $PcData = Join-Path $DataDir "pc"
 $AppRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 New-Item -ItemType Directory -Force -Path $PcData | Out-Null
 $BackupPath = Join-Path $PcData "dns-backup.json"
 $LogPath = Join-Path $PcData "setup.log"
-$TaskName = "PrivacyProtector-PC-DNS-Watchdog"
-$InstallDir = Join-Path $env:ProgramFiles "PrivacyProtector"
+$TaskName = "PrivacyProtector.OpenSource-PC-DNS-Watchdog"
+$InstallDir = Join-Path $env:ProgramFiles "PrivacyProtector.OpenSource"
 $WatchdogSource = Join-Path $AppRoot "scripts\PC-DNS-Watchdog.ps1"
 $WatchdogTarget = Join-Path $InstallDir "PC-DNS-Watchdog.ps1"
 $DnsLog = "Microsoft-Windows-DNS-Client/Operational"

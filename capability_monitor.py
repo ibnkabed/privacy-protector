@@ -45,7 +45,7 @@ IS_WINDOWS = os.name == "nt"
 CREATE_NO_WINDOW = 0x08000000
 
 CONSENT_ROOT = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore"
-HISTORY_DIR = Path(os.environ.get("ProgramData", r"C:\ProgramData")) / "PrivacyProtector" / "capability-history"
+HISTORY_DIR = Path(os.environ.get("ProgramData", r"C:\ProgramData")) / "PrivacyProtector.OpenSource" / "capability-history"
 HISTORY_DB = "CapabilityAccessManager.db"
 HISTORY_TASK = "PrivacyProtector-CapabilityHistory"
 

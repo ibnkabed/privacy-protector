@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "domains": {
+    "ads.example.net": {
+      "label": "ads.example.net",
+      "note": "v1 rule",
+      "source": "manual",
+      "action": "block"
+    }
+  }
+}

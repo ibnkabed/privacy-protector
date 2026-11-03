@@ -1,0 +1,15 @@
+{
+  "version": 4,
+  "mode": "balanced",
+  "defaults": {
+    "location": "deny",
+    "motion": "deny",
+    "tracking": "deny",
+    "systemState": "monitor",
+    "containment": "monitor"
+  },
+  "balancedDefaultsApplied": false,
+  "manualEnforcementApplied": false,
+  "apps": {},
+  "incidents": []
+}

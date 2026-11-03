@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "apps": [
+    {
+      "id": "fa8ae95d-ef09-4e81-bbb0-8d52a737b351",
+      "name": "Example Bank",
+      "bundleID": "com.example.bank",
+      "processName": "",
+      "confirmedDomains": [],
+      "observedDomains": [],
+      "createdAt": "2026-11-03T20:48:22+03:00"
+    }
+  ],
+  "detectedApps": [
+    {
+      "bundleID": "com.example.maps",
+      "name": "Example Maps",
+      "processName": "",
+      "domains": [
+        "tiles.example.org"
+      ],
+      "lastSeen": "2026-11-03T20:48:22+03:00",
+      "sources": [
+        "report"
+      ]
+    }
+  ]
+}

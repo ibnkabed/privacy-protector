@@ -1,9 +1,12 @@
 #Requires -RunAsAdministrator
 # Undoes Enable-Phone-Protection.ps1: removes the two firewall rules.
-param([string]$DataDir = "")
+# -IncludeVersion1 also removes the rules that version 1 of this app created.
+param([string]$DataDir = "", [switch]$IncludeVersion1)
 $ErrorActionPreference = "Stop"
 
-foreach ($RuleName in @("Privacy Protector DNS (UDP)", "Privacy Protector DNS (TCP)")) {
+$RuleNames = @("Privacy Protector (open source) DNS UDP", "Privacy Protector (open source) DNS TCP")
+if ($IncludeVersion1) { $RuleNames += @("Privacy Protector DNS UDP", "Privacy Protector DNS TCP") }
+foreach ($RuleName in $RuleNames) {
     Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 }
 if ($DataDir) {

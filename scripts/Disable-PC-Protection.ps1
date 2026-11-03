@@ -5,12 +5,12 @@ param([string]$DataDir = "")
 $ErrorActionPreference = "Stop"
 
 if (-not $DataDir) {
-    $DataDir = if ($env:PRIVACY_PROTECTOR_DATA_DIR) { $env:PRIVACY_PROTECTOR_DATA_DIR } else { Join-Path (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) "data" }
+    $DataDir = if ($env:PRIVACY_PROTECTOR_DATA_DIR) { $env:PRIVACY_PROTECTOR_DATA_DIR } else { Join-Path $env:LOCALAPPDATA "PrivacyProtector\data" }
 }
 $PcData = Join-Path $DataDir "pc"
 $BackupPath = Join-Path $PcData "dns-backup.json"
-$TaskName = "PrivacyProtector-PC-DNS-Watchdog"
-$InstallDir = Join-Path $env:ProgramFiles "PrivacyProtector"
+$TaskName = "PrivacyProtector.OpenSource-PC-DNS-Watchdog"
+$InstallDir = Join-Path $env:ProgramFiles "PrivacyProtector.OpenSource"
 
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $InstallDir -Recurse -Force -ErrorAction SilentlyContinue

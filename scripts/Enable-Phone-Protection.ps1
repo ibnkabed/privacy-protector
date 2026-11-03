@@ -5,7 +5,7 @@
 param([string]$Program = "", [string]$DataDir = "")
 $ErrorActionPreference = "Stop"
 
-$RuleNames = @("Privacy Protector DNS (UDP)", "Privacy Protector DNS (TCP)")
+$RuleNames = @("Privacy Protector (open source) DNS UDP", "Privacy Protector (open source) DNS TCP")
 foreach ($RuleName in $RuleNames) {
     Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 }
