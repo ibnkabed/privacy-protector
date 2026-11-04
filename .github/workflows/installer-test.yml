@@ -1,0 +1,82 @@
+# Installs a release on a clean Windows machine, upgrades it to a newer one, and uninstalls it. Run by hand.
+name: Installer test
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: Tag to install first
+        default: v2.0.0
+      to:
+        description: Tag to upgrade to
+        default: v2.1.0
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download the installers
+        shell: pwsh
+        run: |
+          gh release download ${{ inputs.from }} --repo ${{ github.repository }} -p "PrivacyProtector-Setup-*.exe" -D old
+          gh release download ${{ inputs.to }} --repo ${{ github.repository }} -p "PrivacyProtector-Setup-*.exe" -D new
+
+      - name: Install, change a setting, upgrade, uninstall
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Exe = Join-Path $env:ProgramFiles "Privacy Protector Open Source\PrivacyProtector.exe"
+          $Base = "http://127.0.0.1:8733"
+          function Install($Dir) {
+            $Setup = (Get-ChildItem $Dir -Filter *.exe).FullName
+            $P = Start-Process $Setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+            if ($P.ExitCode -ne 0) { throw "Setup failed with $($P.ExitCode)" }
+          }
+          function WaitHealth {
+            foreach ($i in 1..60) {
+              try { if ((Invoke-RestMethod "$Base/api/health" -TimeoutSec 3).ok) { return } } catch {}
+              Start-Sleep -Seconds 1
+            }
+            throw "The engine did not answer"
+          }
+          function Registered {
+            Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" -ErrorAction SilentlyContinue |
+              Where-Object { $_.DisplayName -eq "Privacy Protector" }
+          }
+
+          Install old
+          "Installed: $((Registered).DisplayVersion)"
+          Start-Process $Exe -ArgumentList "--background"
+          WaitHealth
+          $Body = @{ firstRunDone = $true; language = "ar" } | ConvertTo-Json
+          Invoke-RestMethod "$Base/api/settings" -Method Post -Body $Body -ContentType "application/json" | Out-Null
+
+          # The upgrade runs while the old engine is still running, as it would for a user.
+          Install new
+          $Version = (Registered).DisplayVersion
+          "Upgraded: $Version"
+          if ("v$Version" -ne "${{ inputs.to }}") { throw "Wrong version after the upgrade: $Version" }
+          Get-Process PrivacyProtector -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+          Start-Process $Exe -ArgumentList "--background"
+          WaitHealth
+          $Settings = (Invoke-RestMethod "$Base/api/settings").settings
+          "After upgrade: language=$($Settings.language) firstRunDone=$($Settings.firstRunDone) trackerLists=$($Settings.trackerLists)"
+          if ($Settings.language -ne "ar" -or -not $Settings.firstRunDone) { throw "The upgrade lost the saved settings" }
+          foreach ($Path in "/", "/api/status", "/api/apps", "/api/pc/status") {
+            "$Path $((Invoke-WebRequest "$Base$Path" -UseBasicParsing).StatusCode)"
+          }
+
+          $Uninstaller = Join-Path (Split-Path $Exe) "unins000.exe"
+          $P = Start-Process $Uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+          "Uninstall exit: $($P.ExitCode)"
+          Start-Sleep -Seconds 10
+          if (Registered) { throw "Still registered after uninstall" }
+          if (Test-Path $Exe) { throw "The program is still on disk" }
+          if (Get-Process PrivacyProtector -ErrorAction SilentlyContinue) { throw "The engine is still running" }
+          "Data kept: $(Test-Path (Join-Path $env:LOCALAPPDATA 'PrivacyProtector\data\settings.json'))"
