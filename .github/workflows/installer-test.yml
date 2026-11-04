@@ -38,10 +38,21 @@ jobs:
             if ($P.ExitCode -ne 0) { throw "Setup failed with $($P.ExitCode)" }
           }
           function WaitHealth {
-            foreach ($i in 1..60) {
+            foreach ($i in 1..30) {
               try { if ((Invoke-RestMethod "$Base/api/health" -TimeoutSec 3).ok) { return } } catch {}
               Start-Sleep -Seconds 1
             }
+            "No answer. Processes:"
+            Get-Process PrivacyProtector -ErrorAction SilentlyContinue | Format-Table Id, StartTime | Out-String
+            "Listening on 8733:"
+            Get-NetTCPConnection -LocalPort 8733 -ErrorAction SilentlyContinue | Out-String
+            Get-Process PrivacyProtector -ErrorAction SilentlyContinue | Stop-Process -Force
+            $P = Start-Process $Exe -ArgumentList "--engine", "--no-tray" -WorkingDirectory (Split-Path $Exe) -PassThru `
+              -RedirectStandardError engine.err -RedirectStandardOutput engine.out
+            Start-Sleep -Seconds 25
+            "Engine exited: $($P.HasExited)"
+            Get-Content engine.err, engine.out -ErrorAction SilentlyContinue | Select-Object -Last 40
+            try { "Direct health: $(Invoke-WebRequest "$Base/api/health" -UseBasicParsing -TimeoutSec 5 | Select-Object -Expand Content)" } catch { "Direct health failed: $_" }
             throw "The engine did not answer"
           }
           function Registered {
@@ -53,8 +64,15 @@ jobs:
           "Installed: $((Registered).DisplayVersion)"
           Start-Process $Exe -ArgumentList "--background"
           WaitHealth
-          $Body = @{ firstRunDone = $true; language = "ar" } | ConvertTo-Json
-          Invoke-RestMethod "$Base/api/settings" -Method Post -Body $Body -ContentType "application/json" | Out-Null
+          Get-Process PrivacyProtector -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+          $File = Join-Path $env:LOCALAPPDATA "PrivacyProtector\data\settings.json"
+          $Saved = Get-Content $File -Raw | ConvertFrom-Json
+          $Saved.firstRunDone = $true
+          $Saved.language = "ar"
+          $Saved | ConvertTo-Json -Depth 5 | Set-Content $File -Encoding utf8
+          Start-Process $Exe -ArgumentList "--background"
+          WaitHealth
 
           # The upgrade runs while the old engine is still running, as it would for a user.
           Install new
