@@ -136,7 +136,7 @@ function placePlanets(){
   /* Up to ten: each planet has its orbit as in the guard. Beyond that, orbits are tried from 2 to 16 and the offsets between them, and the one that keeps the closest two planets furthest apart at any rotation angle is taken; fifteen orbits for 125 planets were causing orbits to be 7 pixels apart and the planet 70 */
   const key=n+"|"+Math.round(U)+"|"+AX.toFixed(3);
   if(key!==placeKey){
-    let best={g:-Infinity,m:Math.max(n,1),step:0};
+    let best={g:-Infinity,m:Math.max(n,1),step:.381966};   // With no offset, up to ten planets would all sit on one straight line
     if(n<=10)best.m=Math.max(n,1);
     else for(let m=2;m<=16;m++)for(const step of [.5,1/3,.381966,.618034,.25]){
       assign(m,step); const g=gapOf(planets,0); if(g>best.g)best={g,m,step}}

@@ -1197,7 +1197,8 @@ def link_phone_domains(profiles: dict[str, Any], classified: dict[str, Any], pc_
     for domain, entry in classified.items():
         if domain in known or domain in pc_domains:
             continue
-        contexts = {keys[c] for c in (entry.get("appContexts") or []) if str(c).replace("‎", "").lower() in keys}
+        names = (str(c).replace("‎", "").lower() for c in entry.get("appContexts") or [])
+        contexts = {keys[name] for name in names if name in keys}
         site = owners.get(_base_domain(domain)) or set()
         for index in contexts or (site if len(site) == 1 else ()):
             linked.setdefault(index, []).append(domain)

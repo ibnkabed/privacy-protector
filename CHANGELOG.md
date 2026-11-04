@@ -24,6 +24,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - A failed check of the network adapters no longer shows the PC as "not protected": it shows "checking…" and runs
   again within seconds.
+- The phone apps list no longer fails when a domain's app context differs in case from the app's name.
+- With ten programs or fewer, planets no longer line up in one straight line.
+- Arabic: the AI providers section, input hints, publisher, hit counts and "minutes ago" are translated correctly.
 
 ### Removed
 

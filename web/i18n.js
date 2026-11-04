@@ -2,6 +2,7 @@
 const AR_PHRASES={
 "The local engine studies every new PC domain. With models turned on in Settings, a writer reads it, the jury decides and the judge confirms before anything runs. Red that a program doesn't need gets blocked.": "تدرس المحرّك المحلية كل نطاق جديد على الكمبيوتر. عند تفعيل النماذج في الإعدادات، يقرأ الكاتب النطاق، ويقرر المحلّفون، ويؤكد القاضي قبل تشغيل أي شيء. يتم حجب ما يُصنّف أحمر ولا يحتاجه البرنامج.",
 "Developer mode is truly hidden only when it's off on the iPhone: Settings → Privacy &amp; Security → Developer Mode → Off. The app never injects code or bypasses app checks.": "وضع المطور مخفي حقًا فقط عندما يكون معطلًا على iPhone: الإعدادات → الخصوصية والأمان → وضع المطور → إيقاف. لا يقوم التطبيق بحقن شفرة برمجية أو تجاوز فحوصات التطبيقات.",
+"Your keys stay on this computer and go only to the provider you name. Roles: the writer reads first, jurors decide, the judge confirms. One provider may hold all three.": "تبقى مفاتيحك في هذا الكمبيوتر ولا تذهب إلا إلى المزوّد الذي تسمّيه. الأدوار: الكاتب يقرأ أولًا، والمحلّفون يقررون، والقاضي يؤكد. ويجوز لمزوّد واحد أن يتولى الثلاثة.",
 "Windows Defender protects; this app reads its state, asks it to scan new downloads, and checks new Outlook mail. It never changes Defender's settings.": "يوفر Windows Defender الحماية؛ يقرأ هذا التطبيق حالته، ويطلب منه فحص التنزيلات الجديدة، ويتحقق من بريد Outlook الجديد. لا يغير أبدًا إعدادات Defender.",
 "Protecting the phone or the PC changes Windows DNS or firewall settings, so Windows asks for approval once. Turning it off later restores everything.": "يؤدي حماية الجوال أو الكمبيوتر إلى تغيير إعدادات DNS أو جدار الحماية في Windows، لذا يطلب Windows الموافقة مرة واحدة. يؤدي إيقاف التشغيل لاحقاً إلى استعادة كل شيء.",
 "This is what the first cleanup deletes; nothing has been deleted yet. After you approve, it runs by itself every day at 9 pm.": "هذا ما يحذفه التنظيف الأول؛ لم يتم حذف أي شيء بعد. بعد موافقتك، يعمل تلقائيًا كل يوم في الساعة 9 مساءً.",
@@ -59,6 +60,7 @@ const AR_PHRASES={
 "privacy-protector-operation-tray-v3": "privacy-protector-operation-tray-v3",
 "Coordinates and CLLocation updates": "تحديثات الإحداثيات وCLLocation",
 "Developer mode is hidden from apps": "وضع المطور مخفي عن التطبيقات",
+"Key saved (leave empty to keep it)": "المفتاح محفوظ (اتركه فارغًا لإبقائه)",
 "Developer mode is visible to apps": "وضع المطور مرئي للتطبيقات",
 "domains again. Saved classes stay": "النطاقات مرة أخرى. تبقى الفئات المحفوظة",
 "moved to operations, no rule made": "نُقلت إلى العمليات، لم تُوضع قاعدة",
@@ -167,6 +169,8 @@ const AR_PHRASES={
 "caps.length?\"\"": "caps.length?\"\"",
 "guard-released": "تم إطلاق حاجز الأمان",
 "Address copied": "نُسخ العنوان",
+"Add a provider": "إضافة مزوّد",
+"Save providers": "حفظ المزوّدين",
 "Confirm block": "تأكيد الحجب",
 "Confirm clear": "تأكيد المسح",
 "Confirm empty": "تأكيد التفريغ",
@@ -213,6 +217,7 @@ const AR_PHRASES={
 "undetermined": "غير محدد",
 "user-allowed": "سمح به المستخدم",
 "user-blocked": "حجبها المستخدم",
+"AI providers": "مزوّدو الذكاء الاصطناعي",
 "Ad tracking": "تتبع الإعلانات",
 "Connections": "الاتصالات",
 "Model usage": "استخدام النموذج",
@@ -235,6 +240,7 @@ const AR_PHRASES={
 "report-file": "ملف التقرير",
 "scan-iphone": "فحص iPhone",
 "last outage": "آخر انقطاع",
+"Daily limit": "الحد اليومي",
 "DNS engine": "محرك DNS",
 "DNS events": "أحداث DNS",
 "Microphone": "الميكروفون",
@@ -296,6 +302,8 @@ const AR_PHRASES={
 "risk-open": "فتح المخاطر",
 "st-orange": "برتقالي الحالة",
 "violation": "انتهاك",
+"Publisher": "الناشر",
+"Test them": "اختبارها",
 "Activity": "النشاط",
 "All apps": "كل التطبيقات",
 "Checking": "جارٍ التحقق",
@@ -344,6 +352,7 @@ const AR_PHRASES={
 "tracking": "التتبع",
 "watching": "المراقبة",
 "checking": "جارٍ الفحص",
+"not safe": "غير آمن",
 "Blocked": "محجوب",
 "Domains": "النطاقات",
 "Monitor": "مراقبة",
@@ -392,6 +401,7 @@ const AR_PHRASES={
 "skipped": "تم التخطي",
 "stopped": "متوقف",
 "unknown": "غير معروف",
+"API key": "مفتاح API",
 "Camera": "الكاميرا",
 "Cycles": "الدورات",
 "DELETE": "حذف",
@@ -463,6 +473,7 @@ const AR_PHRASES={
 "times": "مرات",
 "today": "اليوم",
 "wrong": "خطأ",
+"Model": "النموذج",
 "Apps": "التطبيقات",
 "Both": "كلاهما",
 "Deny": "رفض",
@@ -496,6 +507,8 @@ const AR_PHRASES={
 "weak": "ضعيف",
 "wide": "واسع",
 "Copy": "نسخ",
+"hits": "مرة",
+"Name": "الاسم",
 "Add": "إضافة",
 "App": "التطبيق",
 "Red": "أحمر",
@@ -530,12 +543,14 @@ function i18nRegex(){
     I18N.re=new RegExp("(?<![A-Za-z])("+keys.join("|")+")(?![A-Za-z])","g")}
   return I18N.re;
 }
-function arabic(text){return LANG==="ar"&&text&&/[A-Za-z]/.test(text)&&!HOSTLIKE.test(text.trim())?text.replace(i18nRegex(),m=>AR_PHRASES[m]||m):text}
+const AGO_UNIT={m:"دقيقة",h:"ساعة",d:"يوم"};
+function arabic(text){return LANG==="ar"&&text&&/[A-Za-z]/.test(text)&&!HOSTLIKE.test(text.trim())?text.replace(/(\d+)([mhd]) ago(?![A-Za-z])/g,(x,n,u)=>`منذ ${n} ${AGO_UNIT[u]}`).replace(i18nRegex(),m=>AR_PHRASES[m]||m):text}
 function translateNode(root){
   if(LANG!=="ar"||!root)return;
   if(root.nodeType===3){const t=arabic(root.nodeValue);if(t!==root.nodeValue)root.nodeValue=t;return}
-  if(root.nodeType!==1||root.closest?.("textarea,input,select,canvas,#legal"))return;
+  if(root.nodeType!==1||root.closest?.("canvas,#legal"))return;
   for(const a of ["title","placeholder","aria-label"]){const v=root.getAttribute?.(a);if(v){const t=arabic(v);if(t!==v)root.setAttribute(a,t)}}
+  if(root.closest?.("textarea,input,select"))return;
   root.childNodes.forEach(translateNode);
 }
 const i18nObserver=new MutationObserver(list=>{if(LANG!=="ar")return;
