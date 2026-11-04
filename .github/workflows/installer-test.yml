@@ -9,7 +9,7 @@ on:
         default: v2.0.0
       to:
         description: Tag to upgrade to
-        default: v2.1.0
+        default: v2.1.1
 
 permissions:
   contents: read
@@ -60,6 +60,29 @@ jobs:
               Where-Object { $_.DisplayName -eq "Privacy Protector" }
           }
 
+          function Uninstall {
+            $Uninstaller = Join-Path (Split-Path $Exe) "unins000.exe"
+            $P = Start-Process $Uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+            "Uninstall exit: $($P.ExitCode)"
+            Start-Sleep -Seconds 10
+            if (Registered) { throw "Still registered after uninstall" }
+            if (Test-Path $Exe) { throw "The program is still on disk" }
+            if (Get-Process PrivacyProtector -ErrorAction SilentlyContinue) { throw "The engine is still running" }
+          }
+          $DataDir = Join-Path $env:LOCALAPPDATA "PrivacyProtector\data"
+
+          # A new user: nothing on the machine yet.
+          "--- New install"
+          Install new
+          Start-Process $Exe -ArgumentList "--background"
+          WaitHealth
+          "New install answers"
+          Uninstall
+          Remove-Item (Split-Path $DataDir) -Recurse -Force -ErrorAction SilentlyContinue
+
+          # An existing user. The data folder is made first, because 2.0 and 2.1.0 could not start without one.
+          "--- Upgrade"
+          New-Item -ItemType Directory -Force $DataDir | Out-Null
           Install old
           "Installed: $((Registered).DisplayVersion)"
           Start-Process $Exe -ArgumentList "--background"
@@ -90,11 +113,5 @@ jobs:
             "$Path $((Invoke-WebRequest "$Base$Path" -UseBasicParsing).StatusCode)"
           }
 
-          $Uninstaller = Join-Path (Split-Path $Exe) "unins000.exe"
-          $P = Start-Process $Uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
-          "Uninstall exit: $($P.ExitCode)"
-          Start-Sleep -Seconds 10
-          if (Registered) { throw "Still registered after uninstall" }
-          if (Test-Path $Exe) { throw "The program is still on disk" }
-          if (Get-Process PrivacyProtector -ErrorAction SilentlyContinue) { throw "The engine is still running" }
+          Uninstall
           "Data kept: $(Test-Path (Join-Path $env:LOCALAPPDATA 'PrivacyProtector\data\settings.json'))"

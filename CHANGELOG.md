@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-11-04
+
+### Fixed
+
+- A new install could not start: the engine stopped at launch when its data folder did not exist yet. Upgrades from
+  an existing install were not affected.
+
 ## [2.1.0] - 2026-11-04
 
 It decides without AI by default, and every install keeps its rules and apps.

@@ -3052,6 +3052,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    # A new install has no data folder yet, and the stores below write to it as they load.
+    PC_ROOT.mkdir(parents=True, exist_ok=True)
     # A child of an agent session that closes with that session: it detaches from it and exits
     # before opening any port.
     agent = "" if args.attached else detached_start.agent_ancestor()
