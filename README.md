@@ -22,8 +22,8 @@ Everything runs on your computer. There is no account, no cloud service and no t
 
 1. Download **`PrivacyProtector-Setup-<version>.exe`** from
    [Releases](https://github.com/ibnkabed/privacy-protector/releases) and run it. The installer and
-   `PrivacyProtector.exe` are built on GitHub Actions directly from this repository; code signing is in
-   progress (see [Code signing policy](#code-signing-policy)); SHA-256 checksums are published with every release.
+   `PrivacyProtector.exe` are built on GitHub Actions directly from this repository and are not code-signed
+   yet (see [Code signing policy](#code-signing-policy)); SHA-256 checksums are published with every release.
 2. Privacy Protector opens in your browser at `http://127.0.0.1:8733` and asks **what you want to
    protect**: your phone, this PC, both, or nothing yet.
 3. If you chose the phone: set your phone's Wi-Fi DNS server to this PC's local address (Settings shows
@@ -218,13 +218,10 @@ needs no internet, and includes a scanner that blocks personal data from the rep
 
 ## Code signing policy
 
-**Status: signing is in progress.** The application to SignPath Foundation has been submitted; until it is
-approved, release files are not yet code-signed, and Windows may show its SmartScreen notice when you run the
-installer. Signed builds will be released as soon as signing is approved.
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by
-[SignPath Foundation](https://signpath.org). Release files are built on GitHub Actions directly from this
-repository's tagged source, and signing runs there too; nothing is built or signed on a personal computer.
+**Status: release files are not code-signed yet,** so Windows may show its SmartScreen notice when you run the
+installer. Release files are built on GitHub Actions directly from this repository's tagged source; nothing is
+built on a personal computer, and each release publishes its SHA-256 checksums. The release workflow is ready to
+sign through [SignPath](https://signpath.io) once a certificate is available.
 
 - **Committers and reviewers:** IbnKabed, the project owner
 - **Approvers:** IbnKabed, the project owner
