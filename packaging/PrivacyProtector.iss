@@ -1,5 +1,5 @@
 ; Inno Setup script for the Privacy Protector installer.
-;   iscc /DAppVersion=2.0.0 packaging\PrivacyProtector.iss
+;   iscc /DAppVersion=2.1.1 packaging\PrivacyProtector.iss
 ; Expects the PyInstaller output in dist\PrivacyProtector.
 #ifndef AppVersion
   #define AppVersion "0.0.0"

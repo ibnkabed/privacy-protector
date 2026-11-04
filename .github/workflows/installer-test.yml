@@ -6,7 +6,7 @@ on:
     inputs:
       from:
         description: Tag to install first
-        default: v2.0.0
+        default: v2.1.1
       to:
         description: Tag to upgrade to
         default: v2.1.1
@@ -80,7 +80,7 @@ jobs:
           Uninstall
           Remove-Item (Split-Path $DataDir) -Recurse -Force -ErrorAction SilentlyContinue
 
-          # An existing user. The data folder is made first, because 2.0 and 2.1.0 could not start without one.
+          # An existing user.
           "--- Upgrade"
           New-Item -ItemType Directory -Force $DataDir | Out-Null
           Install old
