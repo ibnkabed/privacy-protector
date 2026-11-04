@@ -5,6 +5,7 @@ Settings. Each switch takes effect at once, without reinstalling:
 
 - phone: DNS protection for a phone that uses this computer as its DNS server
 - pc: DNS protection for this computer itself
+- trackerLists: downloading public tracker lists, for better blocking without models
 - capabilities: watching which programs use the microphone, camera, location
   and contacts, each kind on its own switch
 - outlook: checking new Outlook mail
@@ -37,13 +38,14 @@ DEFAULTS: dict[str, Any] = {
     "language": "en",
     "phone": False,
     "pc": False,
+    "trackerLists": False,
     "capabilities": {"enabled": False, **{kind: True for kind in CAPABILITY_KINDS}},
     "outlook": False,
     "defender": False,
     "tempCleanup": False,
     "models": False,
 }
-SWITCHES = ("phone", "pc", "outlook", "defender", "tempCleanup", "models")
+SWITCHES = ("phone", "pc", "trackerLists", "outlook", "defender", "tempCleanup", "models")
 
 
 def _now() -> str:

@@ -27,7 +27,7 @@ from typing import Any
 
 from ai_reviewer import BLOCK_AGREEMENTS
 import ai_providers
-from domain_verdicts import ai_block_gate, catalog_verdict, domain_function_role, functional_purpose_veto
+from domain_verdicts import ai_block_gate, domain_function_role, functional_purpose_veto
 from pc_protection import protected_reason
 
 CYCLE_SECONDS = 120.0
@@ -71,12 +71,13 @@ class PhoneAutoProtection:
             str(item) for item in (entry.get("appContexts") or []) if item
         )
 
-    @staticmethod
-    def verdict(domain: str, entry: dict[str, Any]) -> dict[str, Any]:
-        """The models' verdict, or with AI review off, the built-in catalog's."""
+    def verdict(self, domain: str, entry: dict[str, Any]) -> dict[str, Any]:
+        """The models' verdict, or with AI review off, the built-in rules'."""
         verdict = entry.get("aiVerdict") if isinstance(entry.get("aiVerdict"), dict) else {}
         if not verdict and not ai_providers.enabled():
-            verdict = catalog_verdict(domain) or {}
+            import local_decider
+
+            verdict = local_decider.verdict_for_domain(domain, self._callers(entry), str(entry.get("category") or ""))
         return verdict
 
     def eligible(self, domain: str, entry: dict[str, Any]) -> tuple[bool, str]:

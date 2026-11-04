@@ -285,10 +285,10 @@ function coreHtml(){
       <span>DNS engine</span><span>${s.ok?"port "+esc(s.dnsPort)+" · up "+Math.round((s.uptimeSeconds||0)/3600)+"h":"not answering"}</span>
       <span>Upstream</span><span>${prov||"—"}</span>
       <span>Phone</span><span>${chosen("phone")?`${ip.recent?"connected":"not seen"} · ${ago(ip.lastSeenAt)}`:"off"}</span>
-      <span>PC routing</span><span>${!chosen("pc")?"off":pc.routing?.routed?"through the engine":"<b class=\"st-red\">bypassing the engine</b>"}</span>
+      <span>PC routing</span><span>${!chosen("pc")?"off":pc.routing?.routed?"through the engine":pc.routing?.routed===false?"<b class=\"st-red\">bypassing the engine</b>":"checking…"}</span>
       <span>Blocked</span><span>${s.blockedDomains??"—"} phone rules · ${pc.blocked??"—"} PC rules</span>
       <span>Records</span><span>${s.events??"—"} DNS events · ${(s.classificationEngine||{}).total??"—"} domains studied</span>
-      <span>Apps</span><span>${phoneApps.length} detected · ${profiles.length} monitored</span>
+      <span>Apps</span><span>${phoneApps.length} detected</span>
       <span>PC review</span><span>${esc(rv.state||"—")} · last ${ago(rv.lastRunAt)}${rv.lastError?" · <b class=\"st-orange\">error</b>":""}</span>
     </div>
     ${issues.length?`<div class="sec">${issues.map(i=>`<div class="dom ${i.sev}"><div class="t">${esc(i.title)}</div>${i.text?`<div class="l">${esc(i.text)}</div>`:""}</div>`).join("")}</div>`
@@ -307,10 +307,10 @@ function rawCore(){
   const s=st.status||{}, pc=st.pc||{}, out=[];
   if(st.status&&!s.ok) out.push({sev:"red",safety:true,title:"The DNS engine isn't answering"});
   if((chosen("phone")||chosen("pc"))&&(s.dnsEngine?.providers||[]).length&&!(s.dnsEngine.providers.some(p=>p.state==="healthy"))) out.push({sev:"red",safety:true,title:"No upstream DNS provider is healthy"});
-  if(chosen("pc")&&st.pc&&pc.routing&&!pc.routing.routed) out.push({sev:"red",safety:true,title:"The PC bypasses the engine",text:"The PC's connections don't go through the engine, so nothing is watched or blocked. Turn PC protection on in Settings."});
+  if(chosen("pc")&&pc.routing?.routed===false) out.push({sev:"red",safety:true,title:"The PC bypasses the engine",text:"The PC's connections don't go through the engine, so nothing is watched or blocked. Turn PC protection on in Settings."});
   const rem=s.connectionReminder||{};
   if(chosen("phone")&&(rem.state==="lost"||rem.state==="disconnected")) out.push({sev:"orange",title:`The phone isn't connected${rem.silentForSeconds?" for "+Math.round(rem.silentForSeconds/60)+"m":""}: reconnect it to the modem (DNS ${rem.dnsAddress||"—"})`});
-  if(s.judgeNotes) out.push({sev:"red",safety:true,title:`The judge couldn't settle ${s.judgeNotes} decision(s): they wait for your review`});
+  if(s.judgeNotes) out.push({sev:"orange",safety:true,title:`The judge couldn't settle ${s.judgeNotes} decision(s): they wait for your review`});
   if(pc.review?.lastError) out.push({sev:"orange",title:"The last PC review failed",text:pc.review.lastError});
   return out;
 }

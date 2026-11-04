@@ -1,5 +1,5 @@
 /* Control-panel tools:
-   ⚙ Settings: linking, activation, iPhone, and monitored apps.
+   ⚙ Settings: your switches, connections, and the iPhone.
    Activity: continuous phone activity and the operations box with its decisions.
    Permissions: phone permissions center (location, motion, and tracking).
    Smart review is added to the Review window. All are small windows under the bar, like the rest of the panel. */
@@ -27,18 +27,26 @@ const REMIND={connected:"connected",lost:"disconnected recently: reconnect it to
 function drawSettings(){
   const s=st.status||{}, rem=s.connectionReminder||{}, pc=st.pc||{}, hist=((tools.caps||{}).status?.sources||[]).find(x=>x.id==="windows-history")||{};
   const test=s.dnsEngine?.lastSelfTest;
-  const detected=phoneApps, monitored=new Set(profiles.map(p=>String(p.bundleID||"").toLowerCase()));
+  const detected=phoneApps;
   const q=String($("#det-q")?.value||"").toLowerCase(), focus=document.activeElement?.id==="det-q";
   const shown=detected.filter(a=>`${a.name} ${a.bundleID}`.toLowerCase().includes(q));
   const dev=tools.dev;
-  show(`<h2>Settings</h2>${choicesHtml()}
+  const routed=pc.routing?.routed, out=(pc.routing?.fallbacks||[])[0];
+  const lastOut=out?`<span class="mut"> · last outage ${out.minutes}m, ${ago(out.to)}</span>`:"";
+  const known=rem.pcAddress||{}, addr=rem.dnsAddress||known.address||"";
+  const moved=known.previous?`<span class="mut"> · was ${esc(known.previous)}, ${ago(known.since)}</span>`:"";
+  const upFor=sec=>{const m=Math.round((sec||0)/60);return m<60?`${m}m`:m<1440?`${Math.round(m/60)}h`:`${Math.round(m/1440)}d`};
+  show(`<h2>Settings</h2>
+    <div class="rows"><span>PC address</span><span><b class="addr">${esc(addr||"—")}</b>${addr?` <button data-t="copy-addr" data-addr="${esc(addr)}">Copy</button>`:""}${moved}</span></div>
+    ${choice("phone")?`<div class="mut gap6">On the phone, set this address as the manual DNS of every home Wi-Fi. A notification arrives if it changes.</div>`:""}
+    ${choicesHtml()}
     <div class="sec"><h3>Connections</h3>
     <div class="rows">
-      <span>Local service</span><span>${s.ok?"running":"<b class=\"st-red\">stopped</b>"}</span>
-      <span>Phone</span>${!choice("phone")?"<span>off</span>":""}<span class="${!choice("phone")?"hide":rem.state==="connected"?"":"st-orange"}">${esc(REMIND[rem.state]||rem.state||"—")} · DNS ${esc(rem.dnsAddress||"—")}${rem.state==="connected"?"":` · ${Math.max(1,Math.round((rem.silentForSeconds||rem.disconnectedForSeconds||0)/60))}m`}</span>
-      <span>PC</span>${!choice("pc")?"<span>off</span>":""}<span class="${!choice("pc")?"hide":pc.routing?.routed?"":"st-red"}">${pc.routing?.routed?"protected: traffic goes through the engine":"not protected: traffic bypasses the engine"}</span>
+      <span>Engine</span><span>${st.status?(s.ok?`running · ${upFor(s.uptimeSeconds)}`:"<b class=\"st-red\">stopped</b>"):"checking…"}</span>
+      <span>Phone</span>${choice("phone")?`<span class="${rem.state==="connected"?"":"st-orange"}">${esc(REMIND[rem.state]||rem.state||"—")}${rem.state==="connected"?"":` · ${Math.max(1,Math.round((rem.silentForSeconds||rem.disconnectedForSeconds||0)/60))}m`}</span>`:"<span>off</span>"}
+      <span>PC</span>${choice("pc")?`<span class="${routed===false?"st-red":""}">${routed?"protected: traffic goes through the engine":routed===false?"not protected: traffic bypasses the engine":"checking…"}${lastOut}</span>`:"<span>off</span>"}
       <span>Windows history</span><span class="${hist.state==="live"?"":"st-orange"}">${esc(hist.state||"—")}${hist.lastCopyAt?" · copied "+ago(hist.lastCopyAt):""}</span>
-      <span>DNS self-test</span><span>${test?`${esc(test.state)} · ${ago(test.finishedAt||test.at||test.time)}`:"not run"}</span>
+      <span>DNS self-test</span><span>${test?`${esc(test.state)} · ${ago(test.finishedAt||test.at||test.time)}`:"not run since the engine started"}</span>
     </div>
     <div class="btns"><button data-t="dns-test">Test DNS</button>
       ${hist.state&&hist.state!=="live"&&choice("capabilities")?`<button data-t="hist-setup">Enable Windows history</button>`:""}</div>
@@ -50,15 +58,11 @@ function drawSettings(){
       ${dev?`<div class="dom ${dev.kind}"><div class="t">${esc(dev.title)}</div><div class="l">${esc(dev.detail)}</div></div>`:""}
       <div class="mut gap6">Developer mode is truly hidden only when it's off on the iPhone: Settings → Privacy &amp; Security → Developer Mode → Off. The app never injects code or bypasses app checks.</div>
     </div>
-    <div class="sec"><h3>Detected apps · ${detected.length} · ${profiles.length} monitored</h3>
+    <div class="sec"><h3>Detected apps · ${detected.length}</h3>
       <div class="tool-bar"><input id="det-q" placeholder="Search by name or bundle ID" value="${esc(q)}"></div>
-      <div class="lg"><table><colgroup><col><col class="w40p"><col class="w56px"><col class="w84px"></colgroup><tbody>
-        ${shown.slice(0,150).map(a=>{const on=monitored.has(String(a.bundleID||"").toLowerCase());
-          return `<tr title="${esc(a.bundleID)}"><td>${esc(a.purposeDisplayName||a.name||a.bundleID)}</td><td>${esc(a.bundleID)}</td><td class="m">${(a.domains||[]).length}</td>
-            <td class="m">${on?`<span class="mut">monitored</span>`:`<button data-t="monitor-app" data-bundle="${esc(a.bundleID)}">Monitor</button>`}</td></tr>`}).join("")}
+      <div class="lg"><table><colgroup><col><col class="w40p"><col class="w56px"></colgroup><tbody>
+        ${shown.slice(0,150).map(a=>`<tr title="${esc(a.bundleID)}"><td>${esc(a.purposeDisplayName||a.name||a.bundleID)}</td><td>${esc(a.bundleID)}</td><td class="m">${(a.domains||[]).length}</td></tr>`).join("")}
       </tbody></table>${shown.length>150?`<div class="mut gap6">${shown.length-150} more: narrow the search</div>`:""}${detected.length?"":`<div class="empty">Import an Apple report or read the iPhone first</div>`}</div>
-      <h3>Add an app by hand</h3>
-      <div class="tool-bar"><input id="add-name" placeholder="Name"><input id="add-bundle" placeholder="com.example.app"><input id="add-proc" placeholder="Process name (optional)"><button data-t="add-app">Add</button></div>
     </div>`);
   if(focus){const i=$("#det-q");i.focus();i.setSelectionRange(i.value.length,i.value.length)}
 }
@@ -90,23 +94,13 @@ async function importReport(file){
   for(const a of found.values()){const ds=[...a.domains].sort(),base={bundleID:a.bundleID,name:a.name,lastSeen:latest||new Date().toISOString()};
     if(!ds.length)parts.push({...base,domains:[]});for(let i=0;i<ds.length;i+=CHUNK)parts.push({...base,domains:ds.slice(i,i+CHUNK)})}
   for(const batch of [...sizedBatches(parts,"apps"),...sizedBatches([...attr.values()],"attributions")])await send("POST","/api/apps/discovered",batch);
-  let linked=0;
-  for(const p of profiles){const f=found.get(String(p.bundleID||"").toLowerCase());if(!f)continue;
-    try{await send("POST",`/api/apps/${encodeURIComponent(p.id)}/domains`,{source:"confirmed",domains:[...f.domains]});linked++}catch(e){}}
-  note(`${rows.length} records · ${found.size} apps found${linked?` · linked to ${linked} monitored`:""}${bad?` · ${bad} bad lines skipped`:""}`,6000);
+  note(`${rows.length} records · ${found.size} apps found${bad?` · ${bad} bad lines skipped`:""}`,6000);
   await reloadSlow();
 }
-async function monitorApp(bundle){
-  const a=phoneApps.find(x=>x.bundleID===bundle); if(!a)return;
-  const r=await send("POST","/api/apps",{name:a.purposeDisplayName||a.name||a.bundleID,bundleID:a.bundleID,processName:a.processName||""});
-  if((a.domains||[]).length)await send("POST",`/api/apps/${encodeURIComponent(r.profile.id)}/domains`,{source:"confirmed",domains:a.domains});
-  note(`${r.profile.name} is monitored`); await reloadSlow();
-}
-
-
 /* ------------------------------------------------------------ Your choices: what is watched and protected */
 const SWITCH_ROWS=[["phone","Phone protection","DNS protection for a phone that uses this computer as its DNS server"],
   ["pc","PC protection","DNS protection for this computer itself"],
+  ["trackerLists","Public tracker lists","Downloads EasyPrivacy, AdGuard DNS and OISD weekly, so more trackers are recognized without AI"],
   ["capabilities","Device access","Which programs use the microphone, camera, location and contacts"],
   ["outlook","Outlook mail","Checks new mail in classic Outlook and removes dangerous messages"],
   ["defender","Windows Defender","Shows Defender's state and asks it to scan new downloads; never changes its settings"],
@@ -185,7 +179,7 @@ async function settingsClick(b){
     b.disabled=true; await saveSettings(patch); return true}
   if(t==="lang"){await saveSettings({language:b.dataset.v}); return true}
   if(t==="wiz"){const v=b.dataset.v; $("#wizard")?.remove();
-    await saveSettings({firstRunDone:true,phone:v==="phone"||v==="both",pc:v==="pc"||v==="both"},"Done. More switches are in Settings."); return true}
+    await saveSettings({firstRunDone:true,phone:v==="phone"||v==="both",pc:v==="pc"||v==="both",trackerLists:v!=="none"},"Done. More switches are in Settings."); return true}
   if(t==="ex-save"){const hosts={};linesOf("ex-hosts").forEach(l=>{const [h,...n]=l.split(/\s+/);hosts[h]=n.join(" ")});
     const r=await send("POST","/api/user-exceptions",{hosts,programs:linesOf("ex-programs"),apps:linesOf("ex-apps")});
     tools.exceptions=r; note((r.rejected||[]).length?"Not saved: "+r.rejected.join("; "):"Trusted lists saved",(r.rejected||[]).length?8000:2600); drawSettings(); return true}
@@ -373,9 +367,7 @@ async function toolClick(b){
       case "hist-setup":{b.disabled=true;await send("POST","/api/pc/capability-history/setup",{});note("Approve the Windows prompt. The history shows up within minutes.",6000);break}
       case "scan-iphone":{b.disabled=true;b.textContent="Reading…";const r=await send("POST","/api/device/apps/scan",{});note(`${r.count} apps read from the iPhone`);await reloadSlow();drawSettings();break}
       case "dev-check":await devCheck();break;
-      case "monitor-app":b.disabled=true;await monitorApp(b.dataset.bundle);drawSettings();break;
-      case "add-app":{const name=$("#add-name").value.trim();if(!name){note("Enter a name");break}
-        const r=await send("POST","/api/apps",{name,bundleID:$("#add-bundle").value.trim(),processName:$("#add-proc").value.trim()});note(`Added ${r.profile.name}`);await reloadSlow();drawSettings();break}
+      case "copy-addr":await navigator.clipboard.writeText(b.dataset.addr);note("Address copied");break;
       case "act-refresh":await fetchLogs();drawActivity();note("Activity refreshed");break;
       case "act-more":tools.actShown+=200;drawActivity();break;
       case "act-clear":{if(!armed(b,"Confirm clear"))break;const r=await send("DELETE","/api/logs");note(`${r.removed||0} requests cleared. Known domains stay.`);await fetchLogs();drawActivity();break}

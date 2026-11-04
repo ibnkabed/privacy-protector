@@ -10,6 +10,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import ai_providers  # noqa: E402
+import features  # noqa: E402
 from features import Features, Switch  # noqa: E402
 from settings import DEFAULTS, Settings, normalize  # noqa: E402
 
@@ -150,6 +151,13 @@ class FeatureSwitchTests(unittest.TestCase):
         self.assertTrue(self.config["enabled"])
         self.settings.update({"models": False})
         self.assertFalse(self.config["enabled"])
+
+    def test_turning_tracker_lists_off_removes_them(self):
+        with mock.patch.object(features.tracker_lists, "clear") as clear:
+            self.settings.update({"trackerLists": True})
+            clear.assert_not_called()
+            self.settings.update({"trackerLists": False})
+        clear.assert_called_once()
 
     def test_a_declined_prompt_is_reported(self):
         self.features.run_script = lambda *a, **k: False

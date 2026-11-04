@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Built-in rules that decide without AI:** outside the catalog, a domain is blocked only on two pieces of evidence,
+  and one piece is watched; domains that reveal the device's location or identity are flagged.
+- **Public tracker lists** (EasyPrivacy, AdGuard DNS, OISD) behind their own switch, updated weekly, with size checks
+  that keep the last good copy. The first-run wizard turns them on when you choose to protect something.
+- **PC address** as the first line of Settings with a Copy button, and a notification when it changes.
+- **A record of the periods the PC left protection**; the last one shows in Settings.
+
+### Changed
+
+- Settings shows the engine's uptime, and the DNS self-test says it resets when the engine restarts.
+- Red in the tray and the core is kept for protection faults; decisions waiting for you are yellow.
+
+### Fixed
+
+- A failed check of the network adapters no longer shows the PC as "not protected": it shows "checking…" and runs
+  again within seconds.
+
+### Removed
+
+- The Monitor button and adding an app by hand: every app already appears as a planet, and its verdict is automatic.
+
 ## [2.0.0] - 2026-11-03
 
 A major update. It reads version 1's data folder, keeps your rules and apps, and asks once what you want

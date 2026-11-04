@@ -156,6 +156,19 @@ def assess(api: str) -> tuple[str, str]:
                 safety.add(issue.get("title", "Defender"))
     except Exception as error:  # noqa: BLE001
         logging.debug("tray: security read failed: %s", error)
+    try:
+        with urllib.request.urlopen(api + "/api/settings", timeout=10) as reply:
+            chosen = json.loads(reply.read().decode("utf-8")).get("settings") or {}
+        if chosen.get("pc"):
+            with urllib.request.urlopen(api + "/api/pc/status", timeout=10) as reply:
+                routing = json.loads(reply.read().decode("utf-8")).get("routing") or {}
+            bypass = routing.get("routed") is False   # None: the check failed, which isn't bypassing
+            if bypass and _state.get("bypass_seen"):
+                red.append("The PC bypasses the engine")
+                safety.add("The PC bypasses the engine")
+            _state["bypass_seen"] = bypass
+    except Exception as error:  # noqa: BLE001
+        logging.debug("tray: routing read failed: %s", error)
     capped: list[str] = []
     try:
         from review_memory import ReviewMemory

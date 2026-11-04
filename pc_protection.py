@@ -41,13 +41,13 @@ from typing import Any, Callable, Iterable
 from urllib.parse import urlsplit
 
 import mail_images
+from routing_history import RoutingHistory
 import user_exceptions
 import user_rules
 import hidden_window
 import ai_providers
 from domain_verdicts import (
     ai_block_gate,
-    catalog_verdict,
     domain_function_role,
     verdict_for,
 )
@@ -1214,13 +1214,15 @@ class PCProtection:
             ]
 
         if pending and not ai_providers.enabled():
-            # AI review is off: the built-in catalog decides what it knows, and the rest is watched.
+            # AI review is off: the built-in rules decide (local_decider).
+            import local_decider
+
             for domain, guard, _packet in pending:
-                verdict = catalog_verdict(domain) or {
-                    "color": "orange", "confidence": 0, "reason": "Not in the built-in catalog: watched. "
-                    "Turn on AI review in Settings for a second reading.", "blockSafe": False, "provider": "built-in catalog",
-                }
-                verdict["reviewedAt"] = _now_iso()
+                with self.lock:
+                    known = dict(self.domains.get(domain) or {})
+                verdict = local_decider.verdict_for_domain(
+                    domain, caller_tokens(self.identities(known)), str((verdict_for(domain) or {}).get("category") or ""),
+                )
                 with self.lock:
                     self._entry(domain)["verdict"] = verdict
                     self.dirty = True
@@ -1473,7 +1475,7 @@ class PCProtection:
         cached = getattr(self, "_routing_cache", None)
         if cached and now - cached[0] < 30:
             return cached[1]
-        status: dict[str, Any] = {"routed": False, "adapters": [], "logEnabled": self.log_reader.enabled}
+        status: dict[str, Any] = {"routed": None, "adapters": [], "logEnabled": self.log_reader.enabled}
         if IS_WINDOWS:
             try:
                 output = subprocess.run(
@@ -1494,16 +1496,19 @@ class PCProtection:
             except (OSError, subprocess.SubprocessError, ValueError):
                 pass
         adapters = status["adapters"]
-        status["routed"] = bool(adapters) and all(
+        # A failed check doesn't mean the PC left protection: None is "checking", not "not protected".
+        status["routed"] = all(
             item["dns"][:1] == ["127.0.0.1"] and all(server == "::1" for server in item["dns6"])
             for item in adapters
-        )
+        ) if adapters else None
         try:
             status["watchdog"] = json.loads((self.directory / "watchdog.json").read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):
             status["watchdog"] = {}
         status["browsers"] = browser_secure_dns()
-        self._routing_cache = (now, status)
+        status["fallbacks"] = RoutingHistory(self.directory).recent()
+        # A failed check isn't kept for 30 seconds: it runs again within seconds.
+        self._routing_cache = (now if adapters else now - 25, status)
         return status
 
     def _link_unattributed(self, items: list[dict[str, Any]]) -> None:

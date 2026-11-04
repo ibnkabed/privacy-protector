@@ -3,7 +3,7 @@
     [AllowEmptyString()]
     [string]$DnsAddress,
 
-    [ValidateSet("connected", "disconnected", "reconnect")]
+    [ValidateSet("connected", "disconnected", "reconnect", "address-changed")]
     [string]$State = "disconnected"
 )
 
@@ -27,6 +27,9 @@ $AddressText = if ([string]::IsNullOrWhiteSpace($DnsAddress)) {
 if ($State -eq "connected") {
     $LogoPath = Join-Path $AppRoot "web\assets\Privacy Protector notification green.png"
     $Text = @("Your phone is connected")
+} elseif ($State -eq "address-changed") {
+    $LogoPath = Join-Path $AppRoot "web\assets\Privacy Protector notification orange.png"
+    $Text = @("This PC's address changed", "New address: $DnsAddress • Set it as the DNS on your phone's networks")
 } elseif ($State -eq "reconnect") {
     $LogoPath = Join-Path $AppRoot "web\assets\Privacy Protector notification orange.png"
     $Text = @("Your phone left protection half an hour ago", "Reconnect it to the router • $AddressText")

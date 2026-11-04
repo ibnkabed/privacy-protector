@@ -607,21 +607,7 @@ _ALL_RULES: tuple[tuple[re.Pattern[str], dict[str, Any]], ...] = (
 )
 
 
-LOCAL_AGREEMENT = "Built-in catalog"
-
-
-def catalog_verdict(domain: str) -> dict[str, Any] | None:
-    """The built-in catalog's verdict in review form, used when AI review is off. Red from the catalog is
-    reviewed knowledge (a documented tracker or ad network), so it may be blocked; every safety gate still applies."""
-    entry = verdict_for(domain)
-    color = str((entry or {}).get("risk") or "")
-    if color not in ("green", "orange", "red"):
-        return None
-    return {
-        "color": color, "confidence": 95, "category": str(entry.get("category") or ""),
-        "purpose": str(entry.get("summary") or ""), "reason": str(entry.get("reason") or entry.get("summary") or ""),
-        "blockSafe": color == "red", "agreement": LOCAL_AGREEMENT, "provider": "built-in catalog", "model": "",
-    }
+LOCAL_AGREEMENT = "Built-in rules"
 
 
 def verdict_for(domain: str) -> dict[str, Any] | None:

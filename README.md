@@ -26,8 +26,8 @@ Everything runs on your computer. There is no account, no cloud service and no t
    yet (see [Code signing policy](#code-signing-policy)); SHA-256 checksums are published with every release.
 2. Privacy Protector opens in your browser at `http://127.0.0.1:8733` and asks **what you want to
    protect**: your phone, this PC, both, or nothing yet.
-3. If you chose the phone: set your phone's Wi-Fi DNS server to this PC's local address (Settings shows
-   it). If you chose the PC: approve the one Windows prompt; your DNS switches to the engine.
+3. If you chose the phone: set your phone's Wi-Fi DNS server to this PC's local address, the first line in
+   Settings, with a Copy button; a notification tells you if it ever changes. If you chose the PC: approve the one Windows prompt; your DNS switches to the engine.
 
 To run from source instead (Python 3.12 or newer):
 
@@ -44,6 +44,7 @@ python -m pip install -r requirements.txt
 |---|---|---|---|
 | Phone protection | Answers DNS for devices on your home network | Two inbound firewall rules for port 53, private networks and your local subnet only | Removes the rules; the engine stops listening on the network |
 | PC protection | Answers the PC's own DNS and blocks what the review marks unsafe | The adapters' DNS servers, browser secure-DNS policy, the DNS client log, and a one-minute watchdog task | Restores the saved DNS settings and removes the watchdog |
+| Public tracker lists | Downloads EasyPrivacy, AdGuard DNS and OISD weekly, so more trackers are recognized without AI | Nothing | Stops downloading and deletes the lists |
 | Device access | Records microphone, camera, location and contacts use per program | Optionally a task that copies Windows' own access log so it can be read | Stops recording; removes the task |
 | Outlook mail | Checks each new message in classic Outlook; removes dangerous mail | Nothing | Stops checking |
 | Windows Defender | Shows Defender's state and detections; asks it to scan new downloads | Nothing (it never changes Defender's settings) | Stops reading |
@@ -68,8 +69,9 @@ resolver within a minute and back when the engine returns.
    hold all three roles. Built-in protection rules always win over the models: health and fitness data
    belongs to you, attendance apps may use location at check-in, infrastructure is never blocked, and doubt
    never blocks.
-   **Without AI review** the built-in catalog decides: documented trackers, ad networks and attribution
-   services are blocked automatically, and anything the catalog doesn't know is watched, not blocked.
+   **Without AI review** the built-in rules decide, with no model and no key: documented trackers, ad networks and
+   attribution services are blocked from the catalog. Anything else needs two pieces of evidence to be blocked (two
+   public tracker lists, or a list and a name that says it collects data); one piece is only watched.
 4. **Only red that is safe to block is blocked.** If a program then insists on a blocked domain in a way
    that shows it needs it, the block is lifted automatically.
 
@@ -134,6 +136,8 @@ app never injects code, never bypasses app checks, and never modifies an app.
 - **AI review is off by default.** When you turn it on, only the domain name and public facts about it
   (its category, its HTTPS page title, which kind of app calls it) go to the providers you added, never
   a program path, your name, or your files. Your keys are stored only in your local data folder.
+- **Public tracker lists** are plain files downloaded from their publishers; only the file is requested, and no
+  domain you visit is sent.
 - **The dashboard** listens on `127.0.0.1` only, refuses requests that name another host (DNS rebinding),
   and accepts changes only with a per-run session token, so a web page open in your browser cannot drive it.
 
@@ -161,11 +165,12 @@ All endpoints are on `http://127.0.0.1:8733`. Requests that change something nee
 %LOCALAPPDATA%\PrivacyProtector\data\
   settings.json                your switches and language
   policy.json                  phone exact-domain rules
-  apps.json                    phone apps you monitor and apps seen in reports
+  apps.json                    phone apps seen in reports and on the paired iPhone
   domain-classifications.json  the study of every domain seen
   dns-activity.ndjson          recent DNS activity
   user-exceptions.json         what you trust
   ai-providers.json            AI providers and keys (only if you add them)
+  tracker-lists\               public tracker lists (only while their switch is on)
   pc\                          PC policy, domains, decisions, device access, Defender and mail state
 ```
 
@@ -228,7 +233,8 @@ sign through [SignPath](https://signpath.io) once a certificate is available.
 - **Privacy:** this program will not transfer any information to other networked systems unless specifically
   requested by the user or the person installing or operating it. The only connections it makes on its own are
   DNS-over-HTTPS lookups for the names your devices ask for, and a bounded fetch of a domain's public HTTPS page
-  title during its study; AI review, when you turn it on, contacts only the providers you configure.
+  title during its study. Public tracker lists, when you turn them on, download three list files and send nothing
+  about you; AI review, when you turn it on, contacts only the providers you configure.
 
 ## License
 

@@ -25,7 +25,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+import pc_address
+import tracker_lists
 from ai_reviewer import DomainAIReviewer
+from routing_history import RoutingHistory
 from domain_classifier import DomainClassificationEngine, SafeHTTPSStudy
 from domain_verdicts import is_block_safe, verdict_for
 from dns_engine import (
@@ -80,7 +83,7 @@ DEFAULT_UPSTREAM = DEFAULT_PRIMARY_UPSTREAM
 CONNECTION_REMINDER_SECONDS = 300
 # After pairing: phone silence for half an hour usually means it moved to another network at home.
 CONNECTION_LOST_SECONDS = 1800
-NOTIFICATION_STATES = {"connected", "disconnected", "reconnect"}
+NOTIFICATION_STATES = {"connected", "disconnected", "reconnect", "address-changed"}
 KNOWN_PROCESS_NAMES = {
     "com.alinma.retail.mobile.v4": "alinma_bank_app",
     "com.t2.availohader": "Availo",
@@ -1798,6 +1801,12 @@ class ConnectionReminderMonitor:
         self.state = "waiting"
         self.loaded_same_boot = False
         self._load_same_boot_state()
+        # The phone uses this PC's address as its manual DNS, so a change takes it out of protection.
+        self.address_watch = pc_address.AddressWatch(
+            self.state_path.with_name("pc-address.json"), self.address_provider,
+            lambda address: self.notifier.send(address, "address-changed"),
+        )
+        self.next_address_check = 0.0
 
     def _load_same_boot_state(self) -> None:
         try:
@@ -1981,6 +1990,7 @@ class ConnectionReminderMonitor:
         return {
             "state": self.state,
             "dnsAddress": str(self.address_provider() or "").strip(),
+            "pcAddress": self.address_watch.snapshot(),
             "graceSeconds": self.grace_seconds,
             "secondsUntilReminder": remaining,
             "monitoringComplete": monitoring_complete,
@@ -2022,6 +2032,9 @@ class ConnectionReminderMonitor:
             try:
                 # Monitoring continues: mobile disconnection after connection is also reminded.
                 self.evaluate()
+                if self.clock() >= self.next_address_check:
+                    self.next_address_check = self.clock() + pc_address.CHECK_SECONDS
+                    self.address_watch.check()
             except Exception as exc:  # keep the DNS backend alive if Windows notifications fail
                 logging.warning("connection reminder check failed: %s", exc)
             self.stop_event.wait(self.check_interval)
@@ -3188,7 +3201,8 @@ def main() -> None:
         switches={
             "phone": [Switch("phone review", phone_auto), Switch("phone reminder", connection_reminder),
                       Switch("phone evidence", evidence_monitor)],
-            "pc": [Switch("pc protection", pc)],
+            "pc": [Switch("pc protection", pc), Switch("routing history", RoutingHistory(PC_ROOT))],
+            "trackerLists": [Switch("tracker lists", tracker_lists.ListUpdater())],
             "any": [Switch("inventory", inventory,
                            lambda s: s.start(pc, capabilities, scan_paired_iphone_apps, profiles))],
             "capabilities": [Switch("capability monitor", capabilities)],

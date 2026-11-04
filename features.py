@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 import ai_providers
 import paths
+import tracker_lists
 from settings import CAPABILITY_KINDS, Settings
 
 
@@ -79,6 +80,7 @@ class Features:
         wanted = {
             "phone": data["phone"],
             "pc": data["pc"],
+            "trackerLists": data["trackerLists"],
             "capabilities": data["capabilities"]["enabled"],
             "outlook": data["outlook"],
             "defender": data["defender"],
@@ -123,3 +125,5 @@ class Features:
                 self.run_script(script, wait=False)
             self._services(new)
             self._models(new)
+            if old["trackerLists"] and not new["trackerLists"]:
+                tracker_lists.clear()
