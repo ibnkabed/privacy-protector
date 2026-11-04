@@ -90,10 +90,7 @@ jobs:
           Get-Process PrivacyProtector -ErrorAction SilentlyContinue | Stop-Process -Force
           Start-Sleep -Seconds 2
           $File = Join-Path $env:LOCALAPPDATA "PrivacyProtector\data\settings.json"
-          $Saved = Get-Content $File -Raw | ConvertFrom-Json
-          $Saved.firstRunDone = $true
-          $Saved.language = "ar"
-          $Saved | ConvertTo-Json -Depth 5 | Set-Content $File -Encoding utf8
+          '{"version": 1, "firstRunDone": true, "language": "ar"}' | Set-Content $File -Encoding ascii
           Start-Process $Exe -ArgumentList "--background"
           WaitHealth
 
