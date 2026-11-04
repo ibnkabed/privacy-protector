@@ -18,6 +18,12 @@ Everything runs on your computer. There is no account, no cloud service and no t
 
 ![Privacy Protector dashboard](docs/screenshots/dashboard.png)
 
+## Demo video
+
+[![Watch the Privacy Protector demo](docs/screenshots/demo-video.jpg)](https://youtu.be/PBTZez4ssLw)
+
+Watch it in [English](https://youtu.be/PBTZez4ssLw) or [Arabic](https://youtu.be/E99FwfM_5Ac).
+
 ## Quick start
 
 1. Download **`PrivacyProtector-Setup-<version>.exe`** from
