@@ -236,6 +236,8 @@ class ResponseAnalysis:
     ttl_fields: list[tuple[int, int]]
     cname_chain: list[str]
     negative: bool
+    qtype: int = 0
+    dangling: bool = False
 
 
 def analyze_response(packet: bytes) -> ResponseAnalysis:
@@ -246,14 +248,17 @@ def analyze_response(packet: bytes) -> ResponseAnalysis:
         raise ValueError("Upstream payload is not a DNS response")
     rcode = flags & 0x000F
     cursor = 12
+    qtype = 0
     for _ in range(qdcount):
         _, cursor = _read_name(packet, cursor)
-        cursor += 4
-        if cursor > len(packet):
+        if cursor + 4 > len(packet):
             raise ValueError("Truncated DNS response question")
+        qtype = struct.unpack("!H", packet[cursor : cursor + 2])[0]
+        cursor += 4
 
     ttl_fields: list[tuple[int, int]] = []
     answer_ttls: list[int] = []
+    answer_types: set[int] = set()
     authority_soa_ttls: list[int] = []
     cname_chain: list[str] = []
     total_records = ancount + nscount + arcount
@@ -272,6 +277,7 @@ def analyze_response(packet: bytes) -> ResponseAnalysis:
         in_authority = ancount <= index < ancount + nscount
         if in_answer and rtype != 41:
             answer_ttls.append(ttl)
+            answer_types.add(rtype)
         if in_answer and rtype == 5:
             try:
                 target, _ = _read_name(packet, rdata_offset)
@@ -291,7 +297,11 @@ def analyze_response(packet: bytes) -> ResponseAnalysis:
                 pass
         cursor = rdata_end
 
-    negative = rcode == 3 or (rcode == 0 and ancount == 0)
+    # A CNAME chain that does not end in the requested type is a negative answer.
+    # Caching it for the CNAME's TTL kept a name unresolvable for over half an hour
+    # after a momentary gap at the provider, when its SOA allowed 30 seconds.
+    dangling = rcode == 0 and bool(cname_chain) and qtype not in (5, 255) and qtype not in answer_types
+    negative = rcode == 3 or (rcode == 0 and ancount == 0) or dangling
     if negative:
         cache_ttl = min(authority_soa_ttls) if authority_soa_ttls else 0
     else:
@@ -303,6 +313,8 @@ def analyze_response(packet: bytes) -> ResponseAnalysis:
         ttl_fields=ttl_fields,
         cname_chain=cname_chain,
         negative=negative,
+        qtype=qtype,
+        dangling=dangling,
     )
 
 
@@ -717,6 +729,7 @@ class Resolver:
     def _forward(self, query: bytes) -> UpstreamResult:
         providers, failover_reason = self._provider_order()
         failures: list[str] = []
+        partial: UpstreamResult | None = None
         for index, provider in enumerate(providers):
             started = time.perf_counter()
             try:
@@ -737,13 +750,21 @@ class Resolver:
                 self._provider_success(provider, latency_ms)
                 if index > 0 and not failover_reason:
                     failover_reason = failures[-1] if failures else "primary provider failed"
-                return UpstreamResult(
+                result = UpstreamResult(
                     answer,
                     _provider_display(provider),
                     latency_ms,
                     failover_reason,
                     retried,
                 )
+                # A missing IPv4 address is worth asking the other provider; the
+                # partial answer stands if that fails. AAAA and HTTPS are left
+                # alone, since their absence after a CNAME is normal.
+                if analysis.dangling and analysis.qtype == 1 and index + 1 < len(providers):
+                    partial = result
+                    failures.append(f"{self.provider_health[provider]['role']}: incomplete CNAME answer")
+                    continue
+                return result
             except (
                 urllib.error.URLError,
                 http.client.HTTPException,
@@ -753,6 +774,8 @@ class Resolver:
             ) as exc:
                 self._provider_failure(provider, exc)
                 failures.append(f"{self.provider_health[provider]['role']}: {_safe_error(exc)}")
+        if partial is not None:
+            return partial
         raise RuntimeError("; ".join(failures) or "No DNS-over-HTTPS provider is configured")
 
     # Computer section: configured in app.py. The computer's own requests are governed by its

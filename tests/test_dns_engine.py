@@ -54,6 +54,16 @@ def answer_cname(query: bytes, target: str = "target.example", ttl: int = 60) ->
     return header + query[12 : question.question_end] + record
 
 
+def answer_dangling(query: bytes, cname_ttl: int = 3600, soa_ttl: int = 30) -> bytes:
+    """A CNAME with no record of the requested type, plus a short SOA."""
+    base = answer_cname(query, ttl=cname_ttl)
+    mname = b"\x02ns\x07example\x00"
+    rname = b"\x04host\x07example\x00"
+    soa = mname + rname + struct.pack("!IIIII", 1, 60, 60, 60, soa_ttl)
+    authority = b"\xc0\x0c" + struct.pack("!HHIH", 6, 1, soa_ttl, len(soa)) + soa
+    return base[:8] + struct.pack("!H", 1) + base[10:] + authority
+
+
 def answer_truncated(query: bytes) -> bytes:
     question = parse_question(query)
     return (
@@ -92,6 +102,8 @@ class LocalDoHHandler(BaseHTTPRequestHandler):
             payload = answer_truncated(query)
         elif self.path == "/cname":
             payload = answer_cname(query)
+        elif self.path == "/dangling":
+            payload = answer_dangling(query)
         else:
             payload = answer_a(query)
         self.send_response(200)
@@ -126,6 +138,35 @@ class DNSEngineTests(unittest.TestCase):
         path = Path(folder) / "policy.json"
         path.write_text(json.dumps({"domains": domains or {}}), encoding="utf-8")
         return PolicyStore(path)
+
+    def test_dangling_cname_is_a_short_negative(self):
+        query = build_query("schools.example", 1)
+        analysis = analyze_response(answer_dangling(query))
+        self.assertTrue(analysis.dangling)
+        self.assertTrue(analysis.negative)
+        self.assertEqual(analysis.cache_ttl, 30)
+        self.assertFalse(analyze_response(answer_a(query)).dangling)
+        self.assertFalse(analyze_response(answer_dangling(build_query("x.example", 5))).dangling)
+
+    def test_dangling_a_answer_tries_the_other_provider(self):
+        query = build_query("schools.example", 1)
+        with tempfile.TemporaryDirectory() as folder, LocalDoHServer() as server:
+            resolver = Resolver(
+                self.make_policy(folder), ActivityLog(),
+                server.base + "/dangling", server.base + "/fallback", timeout=1,
+            )
+            answer = resolver.resolve(query, "127.0.0.1")
+            self.assertFalse(analyze_response(answer).dangling)
+            self.assertEqual([path for path, _ in LocalDoHHandler.requests], ["/dangling", "/fallback"])
+
+    def test_dangling_from_both_providers_is_returned_not_an_error(self):
+        query = build_query("schools.example", 1)
+        with tempfile.TemporaryDirectory() as folder, LocalDoHServer() as server:
+            resolver = Resolver(
+                self.make_policy(folder), ActivityLog(),
+                server.base + "/dangling", server.base + "/dangling", timeout=1,
+            )
+            self.assertEqual(response_code(resolver.resolve(query, "127.0.0.1")), 0)
 
     def test_normalization_idna_and_invalid_names(self):
         self.assertEqual(normalize_domain(" BÜCHER.DE. "), "xn--bcher-kva.de")
