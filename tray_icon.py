@@ -53,6 +53,11 @@ MAIL_TITLE = "New Mail"
 ASSESS_EVERY = 120  # seconds between status checks
 FIRST_ASSESS_AFTER = 90  # engine startup grace period before first check
 GREEN_HOLD = 4  # seconds green remains after judge approval
+# A fault that clears by itself shows green "Previous alert resolved" for this long, then white, so the icon never goes
+# straight from red to white and looks as if the fault still stands. This icon has no "dismiss" item.
+RESOLVED_S = 5.0
+RESOLVED_TIP = "Previous alert resolved"
+ALERT_LEVELS = ("red", "orange", "yellow")
 TIP_LIMIT = 127  # Windows limit for tray icon tooltip text
 
 
@@ -100,7 +105,12 @@ def envelope_icon(size: int = TRAY_SIZE, color: str = "tan"):
 _lock = threading.Lock()
 _icon = None
 _images: dict = {}
-_state = {"level": "white", "reason": "", "deciding": 0, "green_until": 0.0}
+_state = {"level": "white", "reason": "", "deciding": 0, "green_until": 0.0, "resolved_until": 0.0}
+
+
+def settle(old: str, new: str, now: float) -> float:
+    """When an alert clears by itself: the end of the "resolved" green, otherwise 0."""
+    return now + RESOLVED_S if old in ALERT_LEVELS and new == "white" else 0.0
 _health = None
 _wake = threading.Event()
 
@@ -240,8 +250,11 @@ def _paint() -> None:
         icon = _icon
         green = _state["deciding"] > 0 or time.time() < _state["green_until"]
         level, reason = _state["level"], _state["reason"]
+        resolved = time.time() < _state.get("resolved_until", 0.0)
     if level != "red" and green:
         level, reason = "green", "The review is deciding on domains now"
+    elif level == "white" and resolved:
+        level, reason = "green", RESOLVED_TIP
     if icon is None:
         return
     try:
@@ -278,8 +291,15 @@ def _watch(api: str) -> None:
     while True:
         level, reason = assess(api)
         with _lock:
+            until = settle(_state["level"], level, time.time())
+            if until:
+                _state["resolved_until"] = until
             _state["level"], _state["reason"] = level, reason
         _paint()
+        if until:   # the green leaves on time, not at the next check
+            timer = threading.Timer(RESOLVED_S + 0.2, _paint)
+            timer.daemon = True
+            timer.start()
         _wake.wait(ASSESS_EVERY)
         _wake.clear()
 def poke(after: float = 5.0) -> None:

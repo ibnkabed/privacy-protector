@@ -248,3 +248,5 @@ Copyright (c) 2026 IbnKabed
 
 Privacy Protector is free software under the GNU Affero General Public License v3.0 or later; see
 [LICENSE](LICENSE) and [NOTICE](NOTICE). Third-party components and their licenses are listed in NOTICE.
+
+- **2026-11-08:** The tray icon: a fault that clears by itself shows green "Previous alert resolved" for 5 seconds before white (`tray_icon.settle`), tested in `tests/test_tray_resolved.py`.
